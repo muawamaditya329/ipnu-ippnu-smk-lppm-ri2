@@ -12,7 +12,10 @@ export default defineConfig({
 				runes: ({ filename }) =>
 					filename.split(/[/\\]/).includes('node_modules') ? undefined : true
 			},
-			adapter: adapter()
+			adapter: adapter(),
+			// Untuk produksi: ORIGIN=https://domain-anda npm run build
+			// (adapter-node memakai nilai ini utk validasi CSRF form POST)
+			paths: process.env.ORIGIN ? { origin: process.env.ORIGIN } : undefined
 		})
 	]
 });

@@ -1,2 +1,181 @@
 @import 'tailwindcss';
 @plugin '@tailwindcss/typography';
+
+/* ============================================================
+   Design System — Komisariat IPNU & IPPNU SMK LPPM RI 2 Kedungreja
+   primary = hijau (IPNU/NU) · accent = merah (IPPNU) · gold = aksen
+   ============================================================ */
+
+@theme {
+	--font-sans: 'Inter', ui-sans-serif, system-ui, -apple-system, sans-serif;
+	--font-display: 'Plus Jakarta Sans', 'Inter', ui-sans-serif, system-ui, sans-serif;
+
+	--color-primary-50: #ecfdf5;
+	--color-primary-100: #d1fae5;
+	--color-primary-200: #a7f3d0;
+	--color-primary-300: #6ee7b7;
+	--color-primary-400: #34d399;
+	--color-primary-500: #10b981;
+	--color-primary-600: #059669;
+	--color-primary-700: #047857;
+	--color-primary-800: #065f46;
+	--color-primary-900: #064e3b;
+	--color-primary-950: #022c22;
+
+	--color-accent-50: #fef2f2;
+	--color-accent-100: #fee2e2;
+	--color-accent-200: #fecaca;
+	--color-accent-300: #fca5a5;
+	--color-accent-400: #f87171;
+	--color-accent-500: #ef4444;
+	--color-accent-600: #dc2626;
+	--color-accent-700: #b91c1c;
+	--color-accent-800: #991b1b;
+	--color-accent-900: #7f1d1d;
+	--color-accent-950: #450a0a;
+
+	--color-gold-50: #fffbeb;
+	--color-gold-100: #fef3c7;
+	--color-gold-200: #fde68a;
+	--color-gold-300: #fcd34d;
+	--color-gold-400: #fbbf24;
+	--color-gold-500: #f59e0b;
+	--color-gold-600: #d97706;
+	--color-gold-700: #b45309;
+	--color-gold-800: #92400e;
+	--color-gold-900: #78350f;
+
+	--shadow-soft: 0 1px 3px rgb(0 0 0 / 0.06), 0 8px 24px -12px rgb(0 0 0 / 0.12);
+	--shadow-lift: 0 2px 6px rgb(0 0 0 / 0.07), 0 16px 40px -16px rgb(0 0 0 / 0.18);
+}
+
+/* ---------- Base ---------- */
+
+@layer base {
+	html {
+		scroll-behavior: smooth;
+	}
+	body {
+		@apply bg-stone-50 font-sans text-stone-800 antialiased;
+	}
+	h1, h2, h3, h4 {
+		@apply font-display tracking-tight;
+	}
+	::selection {
+		@apply bg-primary-200 text-primary-900;
+	}
+}
+
+/* ---------- Pola geometris islami (latar hero/section) ---------- */
+
+.pattern-islamic {
+	background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='72' height='72' viewBox='0 0 72 72'%3E%3Cg fill='none' stroke='%23ffffff' stroke-opacity='0.14'%3E%3Cpath d='M36 4l8 24 24 8-24 8-8 24-8-24-24-8 24-8z'/%3E%3Ccircle cx='36' cy='36' r='10'/%3E%3C/g%3E%3C/svg%3E");
+}
+
+.pattern-islamic-dark {
+	background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='72' height='72' viewBox='0 0 72 72'%3E%3Cg fill='none' stroke='%23047857' stroke-opacity='0.10'%3E%3Cpath d='M36 4l8 24 24 8-24 8-8 24-8-24-24-8 24-8z'/%3E%3Ccircle cx='36' cy='36' r='10'/%3E%3C/g%3E%3C/svg%3E");
+}
+
+/* ---------- Primitif komponen (dipakai langsung atau via komponen Svelte) ---------- */
+
+@layer components {
+	.btn {
+		@apply inline-flex cursor-pointer items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold transition
+			focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-600
+			disabled:cursor-not-allowed disabled:opacity-50;
+	}
+	.btn-primary {
+		@apply bg-primary-700 text-white shadow-sm hover:bg-primary-800 active:bg-primary-900;
+	}
+	.btn-accent {
+		@apply bg-accent-700 text-white shadow-sm hover:bg-accent-800;
+	}
+	.btn-outline {
+		@apply border border-stone-300 bg-white text-stone-700 shadow-sm hover:border-primary-600 hover:text-primary-700;
+	}
+	.btn-ghost {
+		@apply text-stone-600 hover:bg-stone-100 hover:text-stone-900;
+	}
+	.btn-danger {
+		@apply border border-accent-200 bg-accent-50 text-accent-700 hover:bg-accent-100;
+	}
+	.btn-gold {
+		@apply bg-gold-400 text-stone-900 shadow-sm hover:bg-gold-300;
+	}
+	.btn-sm {
+		@apply rounded-lg px-3 py-1.5 text-xs;
+	}
+	.btn-lg {
+		@apply rounded-2xl px-6 py-3.5 text-base;
+	}
+
+	.card {
+		@apply rounded-2xl border border-stone-200 bg-white shadow-soft;
+	}
+
+	.label {
+		@apply mb-1.5 block text-sm font-semibold text-stone-700;
+	}
+	.input {
+		@apply block w-full rounded-xl border border-stone-300 bg-white px-3.5 py-2.5 text-sm text-stone-900 shadow-sm transition
+			placeholder:text-stone-400
+			focus:border-primary-600 focus:outline-none focus:ring-2 focus:ring-primary-600/20
+			disabled:cursor-not-allowed disabled:bg-stone-100;
+	}
+	.input-error {
+		@apply border-accent-400 focus:border-accent-500 focus:ring-accent-500/20;
+	}
+	.hint {
+		@apply mt-1.5 text-xs text-stone-500;
+	}
+	.error-text {
+		@apply mt-1.5 text-xs font-medium text-accent-600;
+	}
+
+	.badge {
+		@apply inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-semibold;
+	}
+	.badge-green {
+		@apply bg-primary-100 text-primary-800;
+	}
+	.badge-red {
+		@apply bg-accent-100 text-accent-800;
+	}
+	.badge-amber {
+		@apply bg-gold-100 text-gold-800;
+	}
+	.badge-gray {
+		@apply bg-stone-100 text-stone-600;
+	}
+	.badge-blue {
+		@apply bg-sky-100 text-sky-800;
+	}
+
+	.th {
+		@apply px-4 py-3 text-left text-xs font-bold tracking-wide text-stone-500 uppercase;
+	}
+	.td {
+		@apply px-4 py-3 text-sm text-stone-700;
+	}
+}
+
+/* ---------- Kartu anggota: hanya kartu yang tercetak saat print ---------- */
+
+@media print {
+	body * {
+		visibility: hidden;
+	}
+	.print-area,
+	.print-area * {
+		visibility: visible;
+	}
+	.print-area {
+		position: fixed;
+		inset: 0;
+		margin: 0;
+		padding: 0;
+	}
+	.no-print {
+		display: none !important;
+	}
+}
