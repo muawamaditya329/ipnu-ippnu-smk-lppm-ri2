@@ -1,0 +1,95 @@
+# Rencana AI — jalankan manual dari tab Actions ("Run workflow").
+# Isi deskripsi tugas; GLM membaca struktur repo dan menyusun rencana
+# implementasi, lalu hasilnya dibuat sebagai issue baru untuk ditindaklanjuti.
+# Kunci API disimpan sebagai repo secret GLM_API_KEY — tidak pernah ditulis di repo.
+name: Rencana AI (GLM)
+
+on:
+  workflow_dispatch:
+    inputs:
+      tugas:
+        description: "Tugas yang ingin direncanakan (mis. 'tambahkan ekspor PDF kartu anggota')"
+        required: true
+        type: string
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  rencana:
+    name: Susun rencana dengan GLM
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Kumpulkan konteks repo
+        run: git ls-files > struktur.txt
+
+      - name: Minta rencana dari GLM
+        env:
+          GLM_API_KEY: ${{ secrets.GLM_API_KEY }}
+          TUGAS: ${{ inputs.tugas }}
+        run: |
+          python3 << 'PY'
+          import json, os, urllib.request, urllib.error
+
+          tugas = os.environ["TUGAS"]
+          struktur = open("struktur.txt", encoding="utf-8").read()
+          bacaan = ""
+          for nama in ("CLAUDE.md", "DESIGN.md", "README.md", "package.json"):
+              if os.path.exists(nama):
+                  with open(nama, encoding="utf-8") as f:
+                      bacaan += f"\n### {nama}\n```\n{f.read()[:12000]}\n```\n"
+
+          sistem = (
+              "Anda arsitek perangkat lunak untuk proyek SvelteKit 3 + Svelte 5 runes + "
+              "TypeScript + Tailwind v4 + better-sqlite3 (website organisasi pelajar "
+              "IPNU/IPPNU, seluruh teks UI bahasa Indonesia). Susun RENCANA IMPLEMENTASI "
+              "yang konkret untuk tugas berikut, mengikuti konvensi proyek (alias #lib "
+              "dengan ekstensi .ts, pola form action dengan HasilAksi, guard hooks.server, "
+              "DESIGN.md untuk tampilan). Balas dalam bahasa Indonesia dengan struktur: "
+              "## Pemahaman Tugas, ## Langkah Implementasi (bernomor, sebutkan berkas yang "
+              "disentuh), ## Risiko & Hal yang Perlu Diputuskan Manusia, ## Kriteria Selesai. "
+              "Jangan menulis kode lengkap; rencana saja."
+          )
+          isi = f"Tugas: {tugas}\n\nStruktur berkas repo:\n```\n{struktur}\n```\n{bacaan}"
+
+          body = json.dumps({
+              "model": "glm-5.3-flash",
+              "messages": [
+                  {"role": "system", "content": sistem},
+                  {"role": "user", "content": isi},
+              ],
+              "temperature": 0.3,
+          }).encode()
+
+          req = urllib.request.Request(
+              "https://open.bigmodel.cn/api/paas/v4/chat/completions",
+              data=body,
+              headers={
+                  "Authorization": "Bearer " + os.environ["GLM_API_KEY"],
+                  "Content-Type": "application/json",
+              },
+          )
+          try:
+              with urllib.request.urlopen(req, timeout=300) as r:
+                  resp = json.load(r)
+              rencana = resp["choices"][0]["message"]["content"]
+          except urllib.error.HTTPError as e:
+              raise SystemExit(f"API GLM galat {e.code}: {e.read().decode(errors='replace')[:500]}")
+
+          with open("rencana.md", "w", encoding="utf-8") as f:
+              f.write(f"## 🤖 Rencana AI — {tugas}\n\n{rencana}\n\n"
+                      "---\n*Hasil workflow Rencana AI (GLM). Rencana, bukan kode jadi — "
+                      "tinjau lalu terapkan lewat PR.*")
+          PY
+
+      - name: Buat issue rencana
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh issue create \
+            --repo "${{ github.repository }}" \
+            --title "Rencana AI: ${{ inputs.tugas }}" \
+            --body-file rencana.md

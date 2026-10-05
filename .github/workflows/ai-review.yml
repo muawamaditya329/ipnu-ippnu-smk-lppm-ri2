@@ -1,0 +1,97 @@
+# Tinjauan AI — setiap pull request ditinjau model GLM (Zhipu).
+# Hasil tinjauan dikirim sebagai komentar di PR. Tidak memblokir merge:
+# gunakan sebagai masukan, keputusan akhir tetap di manusia.
+# Kunci API disimpan sebagai repo secret GLM_API_KEY — tidak pernah ditulis di repo.
+name: Tinjauan AI (GLM)
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  tinjau:
+    name: Tinjau diff dengan GLM
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Ambil diff pull request
+        run: |
+          BASE="origin/${{ github.base_ref }}"
+          git fetch --no-tags origin "${{ github.base_ref }}"
+          git diff "$BASE...HEAD" > diff.txt
+          # Jaga ukuran prompt: 60 ribu karakter pertama sudah cukup untuk tinjauan.
+          head -c 60000 diff.txt > diff-potong.txt
+          echo "Ukuran diff: $(wc -c < diff.txt) byte (dipakai: $(wc -c < diff-potong.txt) byte)"
+
+      - name: Minta tinjauan GLM
+        env:
+          GLM_API_KEY: ${{ secrets.GLM_API_KEY }}
+        run: |
+          python3 << 'PY'
+          import json, os, urllib.request, urllib.error
+
+          diff = open("diff-potong.txt", encoding="utf-8").read()
+          if not diff.strip():
+              open("review.md", "w", encoding="utf-8").write(
+                  "Tidak ada perubahan kode pada PR ini."
+              )
+              raise SystemExit(0)
+
+          sistem = (
+              "Anda peninjaul kode senior untuk proyek SvelteKit + TypeScript + SQLite "
+              "(website organisasi pelajar IPNU/IPPNU, UI bahasa Indonesia). "
+              "Tinjau diff berikut. Fokus: bug nyata, kebocoran keamanan (XSS, SQL, sesi, "
+              "otorisasi), pelanggaran konvensi proyek (DESIGN.md, pola form action), dan "
+              "regresi aksesibilitas. Balas dalam bahasa Indonesia dengan struktur: "
+              "## Ringkasan, ## Temuan (beri prioritas Tinggi/Sedang/Rendah, kutip berkas), "
+              "## Saran. Bila tidak ada temuan, katakan demikian dengan jujur. "
+              "Jangan memuji secara berlebihan; langsung ke substansi."
+          )
+          isi = f"Diff pull request:\n```diff\n{diff}\n```"
+
+          body = json.dumps({
+              "model": "glm-5.3-flash",
+              "messages": [
+                  {"role": "system", "content": sistem},
+                  {"role": "user", "content": isi},
+              ],
+              "temperature": 0.2,
+          }).encode()
+
+          req = urllib.request.Request(
+              "https://open.bigmodel.cn/api/paas/v4/chat/completions",
+              data=body,
+              headers={
+                  "Authorization": "Bearer " + os.environ["GLM_API_KEY"],
+                  "Content-Type": "application/json",
+              },
+          )
+          try:
+              with urllib.request.urlopen(req, timeout=300) as r:
+                  resp = json.load(r)
+              ulasan = resp["choices"][0]["message"]["content"]
+          except urllib.error.HTTPError as e:
+              ulasan = f"> ⚠️ API GLM mengembalikan galat {e.code}. Tinjauan otomatis gagal; periksa secret GLM_API_KEY."
+          except Exception as e:  # noqa: BLE001 — laporkan apa pun sebagai komentar PR
+              ulasan = f"> ⚠️ Tinjauan otomatis gagal: `{type(e).__name__}`"
+
+          open("review.md", "w", encoding="utf-8").write(
+              f"## 🤖 Tinjauan AI (GLM)\n\n{ulasan}\n\n"
+              "---\n*Otomatis dari workflow Tinjauan AI; bukan keputusan merge.*"
+          )
+          PY
+
+      - name: Kirim komentar ke PR
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh pr comment "${{ github.event.pull_request.number }}" \
+            --repo "${{ github.repository }}" \
+            --body-file review.md

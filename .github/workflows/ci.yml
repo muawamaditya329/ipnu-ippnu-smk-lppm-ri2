@@ -1,0 +1,70 @@
+# CI — verifikasi otomatis setiap push & pull request:
+# svelte-check (0 error wajib) → build produksi → smoke test server hasil build.
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  ci:
+    name: Check · Build · Smoke
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      # Approval script install better-sqlite3 sudah tertulis di package.json
+      # (field "allowScripts"), sehingga npm ci menjalankannya secara normal.
+      - name: Instal dependensi
+        run: npm ci
+
+      # Jaring pengaman: pastikan binding native better-sqlite3 terpasang.
+      - name: Verifikasi binding native better-sqlite3
+        run: npm rebuild better-sqlite3
+
+      - name: svelte-check
+        run: npm run check
+
+      # ORIGIN dibaca adapter-node saat build (lihat README bagian Deploy).
+      - name: Build produksi
+        run: npm run build
+        env:
+          ORIGIN: http://localhost:3000
+
+      - name: Smoke test server hasil build
+        run: |
+          ORIGIN=http://localhost:3000 PORT=3000 node build/index.js &
+          PID=$!
+          siap=0
+          for i in $(seq 1 30); do
+            if curl -sf http://localhost:3000/ >/dev/null 2>&1; then siap=1; break; fi
+            sleep 1
+          done
+          if [ "$siap" != "1" ]; then
+            echo "::error::Server tidak siap dalam 30 detik"
+            kill $PID 2>/dev/null || true
+            exit 1
+          fi
+          gagal=0
+          for path in / /berita /agenda /galeri /dokumen /daftar /masuk /tentang; do
+            code=$(curl -s -o /dev/null -w '%{http_code}' "http://localhost:3000$path")
+            echo "$path -> $code"
+            if [ "$code" != "200" ]; then
+              echo "::error::Halaman $path mengembalikan $code (diharapkan 200)"
+              gagal=1
+            fi
+          done
+          code=$(curl -s -o /dev/null -w '%{http_code}' http://localhost:3000/halaman-tidak-ada)
+          echo "/halaman-tidak-ada -> $code (diharapkan 404)"
+          if [ "$code" != "404" ]; then
+            echo "::error::Rute tak dikenal seharusnya 404, didapat $code"
+            gagal=1
+          fi
+          kill $PID 2>/dev/null || true
+          exit $gagal

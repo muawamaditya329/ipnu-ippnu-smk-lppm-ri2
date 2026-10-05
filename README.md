@@ -1,5 +1,7 @@
 # Website Komisariat IPNU & IPPNU — SMK LPPM RI 2 Kedungreja
 
+[![CI](https://github.com/muawamaditya329/ipnu-ippnu-smk-lppm-ri2/actions/workflows/ci.yml/badge.svg)](https://github.com/muawamaditya329/ipnu-ippnu-smk-lppm-ri2/actions/workflows/ci.yml)
+
 Aplikasi web organisasi pelajar (mini-SaaS) untuk Pimpinan Komisariat Ikatan Pelajar Nahdlatul Ulama (IPNU) dan Ikatan Pelajar Putri Nahdlatul Ulama (IPPNU) SMK LPPM RI 2 Kedungreja, Cilacap.
 
 ## Fitur
@@ -74,6 +76,13 @@ PORT=3000 node build
 > Lihat `src/routes/admin/` untuk menu; login di `/masuk`.
 
 Contoh systemd / PM2: `pm2 start build/index.js --name ipnu-ippnu-web`.
+
+## CI/CD (GitHub Actions)
+
+- **CI** (`.github/workflows/ci.yml`) — jalan pada setiap push & PR: `npm ci` → `npm run check` → `npm run build` → smoke test server hasil build (8 halaman publik harus 200, rute tak dikenal 404).
+- **Tinjauan AI** (`.github/workflows/ai-review.yml`) — setiap PR otomatis ditinjau model GLM; hasilnya jadi komentar di PR. Tidak memblokir merge.
+- **Rencana AI** (`.github/workflows/ai-tugas.yml`) — jalankan manual di tab *Actions → Run workflow*: isi deskripsi tugas, GLM menyusun rencana implementasi lalu membuat issue baru.
+- Kunci API GLM disimpan sebagai repo secret `GLM_API_KEY` (Settings → Secrets and variables → Actions) — tidak pernah ditulis di berkas repo.
 
 ## Struktur penting
 
