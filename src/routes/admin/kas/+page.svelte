@@ -72,22 +72,26 @@
 	// Modal hanya dibuka bila kegagalan berasal dari form catat transaksi (action buat
 	// selalu mengirim `nilai`); kegagalan aksi lain (mis. hapus ditolak admin) tampil
 	// sebagai banner di halaman, bukan modal kosong.
+	// PENTING: effect ini hanya boleh MEMBACA `form` — daftar kategori dihitung dari
+	// `n.jenis` milik server, bukan dari `jenisForm`. Kalau membaca state lokal
+	// (jenisForm/kategoriForm), effect menjadi bergantung padanya: setiap kali pengguna
+	// mengganti radio jenis, effect jalan ulang memakai objek `form` gagal yang lama dan
+	// MENGEMBALIKAN pilihan jenis/kategori pengguna (radio terasa "tidak bisa diganti").
 	$effect(() => {
 		if (form) memproses = false;
 		if (form?.sukses) {
 			bukaModal = false;
 		} else if (form?.galat && form.nilai) {
 			const n = form.nilai;
-			if (n) {
-				jenisForm = n.jenis === 'keluar' ? 'keluar' : 'masuk';
-				jumlahForm = n.jumlah;
-				// Kategori dikembalikan hanya bila masih sah utk jenis terpilih;
-				// kalau tidak, pakai opsi pertama daftar jenis itu.
-				const daftar = jenisForm === 'masuk' ? KATEGORI_KAS_MASUK : KATEGORI_KAS_KELUAR;
-				kategoriForm = daftar.includes(n.kategori) ? n.kategori : (daftar[0] ?? '');
-				keteranganForm = n.keterangan;
-				tanggalForm = n.tanggal;
-			}
+			const j: 'masuk' | 'keluar' = n.jenis === 'keluar' ? 'keluar' : 'masuk';
+			// Kategori dikembalikan hanya bila masih sah utk jenis itu;
+			// kalau tidak, pakai opsi pertama daftar jenis tersebut.
+			const daftar = j === 'masuk' ? KATEGORI_KAS_MASUK : KATEGORI_KAS_KELUAR;
+			jenisForm = j;
+			jumlahForm = n.jumlah;
+			kategoriForm = daftar.includes(n.kategori) ? n.kategori : (daftar[0] ?? '');
+			keteranganForm = n.keterangan;
+			tanggalForm = n.tanggal;
 			bukaModal = true;
 		}
 	});
