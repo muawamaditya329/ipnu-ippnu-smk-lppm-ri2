@@ -152,7 +152,7 @@
 								memverifikasi keanggotaanmu.
 							</p>
 						</div>
-						<!-- Arahkan ke dashboard anggota: NIS + password yang dibuat saat mendaftar -->
+						<!-- Arahkan ke dasbor anggota: NIS + password yang dibuat saat mendaftar -->
 						<p class="mt-4 border-t border-stone-100 pt-4 text-sm text-stone-600">
 							Sudah punya akun?
 							<a
@@ -160,7 +160,7 @@
 								class="font-semibold text-primary-700 underline decoration-primary-300 underline-offset-2 hover:text-primary-800"
 								>Masuk di sini</a
 							>
-							untuk membuka dashboard keanggotaanmu.
+							untuk membuka dasbor keanggotaanmu.
 						</p>
 					{:else}
 						<div

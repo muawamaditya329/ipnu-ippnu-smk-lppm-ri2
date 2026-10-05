@@ -1,4 +1,4 @@
-// Konstanta organisasi yang tidak berubah dari dashboard.
+// Konstanta organisasi yang tidak bergantung pada data dasbor.
 
 export const SEKOLAH = 'SMK LPPM RI 2 Kedungreja';
 export const KOTA = 'Kedungreja, Cilacap';

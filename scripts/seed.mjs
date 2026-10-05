@@ -358,8 +358,8 @@ eventStmt.run(
 	'terjadwal'
 );
 eventStmt.run(
-	'HUT NU ke-',
-	'Peringatan hari lahir Nahdlatul Ulama: kirab budaya, santunan, dan pengajian akbar. Patungan panitia dengan ranting.',
+	'Peringatan HUT NU',
+	'Hari lahir Nahdlatul Ulama: kirab budaya, santunan, dan pengajian akbar. Patungan panitia dengan ranting.',
 	'kegiatan',
 	'Halaman Sekolah',
 	tanggalDatang(35),
@@ -391,7 +391,7 @@ eventStmt.run(
 	'selesai'
 );
 eventStmt.run(
-	'Lomba Antar Kelasa Muharraman',
+	'Lomba Antar Kelas Muharraman',
 	'Lomba azan, tartil, dan ceramah cendekia dalam rangka peringatan tahun baru hijriah.',
 	'lomba',
 	'Aula Sekolah',
