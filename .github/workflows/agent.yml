@@ -1,0 +1,94 @@
+# Agent CI — SATU agent = SATU run Action. Tugas diambil dari berkas JSON di ci-agents/.
+# Agent (model GLM) mengerjakan tugasnya di runner dengan akses alat, lalu lolos gerbang
+# kualitas (check → build → smoke) sebelum hasilnya di-commit & push ke main.
+# Rantai berantai: agent yang sukses langsung mengerjakan tugas berikutnya (berikut).
+# Gagal = rantai berhenti (tidak ada push, tidak ada lanjutan) — periksa log run ini.
+name: Agent (GLM)
+
+on:
+  workflow_dispatch:
+    inputs:
+      berkas:
+        description: "Berkas tugas di ci-agents/ (mis. ci-agents/001-uji-auth.json)"
+        required: true
+        type: string
+
+permissions:
+  contents: write
+  actions: write
+
+concurrency:
+  group: agent-pipeline # antrean ketat: satu agent aktif pada satu waktu
+  cancel-in-progress: false
+
+jobs:
+  agent:
+    name: ${{ inputs.berkas }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 300 # dibatasi 5 jam per run CI/CD
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Instal dependensi
+        run: npm ci
+
+      - name: Pasang chromium bila tugas butuh uji peramban
+        run: |
+          if jq -e '.browser == true' "${{ inputs.berkas }}" >/dev/null; then
+            npm i --no-save playwright-core
+            npx playwright-core install chromium
+            echo "CHROME_PATH=$(find ~/.cache/ms-playwright -name chrome -type f | head -1)" >> "$GITHUB_ENV"
+          fi
+
+      - name: Jalankan agent (GLM)
+        env:
+          GLM_API_KEY: ${{ secrets.GLM_API_KEY }}
+        run: python3 scripts/agent-ci/run_agent.py --tugas "${{ inputs.berkas }}"
+
+      - name: Catat status
+        if: always()
+        run: |
+          if [ "${{ job.status }}" = "success" ]; then ST=selesai; else ST=gagal; fi
+          python3 scripts/agent-ci/catat_status.py \
+            "${{ inputs.berkas }}" \
+            "$ST" \
+            "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+
+      - name: Ringkasan laporan ke halaman run
+        if: always()
+        run: if [ -f /tmp/agent-report.md ]; then cat /tmp/agent-report.md >> "$GITHUB_STEP_SUMMARY"; fi
+
+      - name: Commit & push hasil agent
+        if: success()
+        env:
+          BERKAS: ${{ inputs.berkas }}
+        run: |
+          git config user.name "agent-ci (GLM)"
+          git config user.email "agent-ci@users.noreply.github.com"
+          JUDUL=$(jq -r '.judul' "$BERKAS"); ID=$(jq -r '.id' "$BERKAS")
+          git add -A
+          if ! git diff --cached --quiet; then
+            git commit -m "ci(agent): $JUDUL ($ID) [skip ci]" -m "Co-Authored-By: Claude Code <noreply@anthropic.com>"
+            git push
+          else
+            echo "Tidak ada perubahan kode dari agent ini."
+          fi
+
+      - name: Lanjutkan rantai ke tugas berikutnya
+        if: success()
+        env:
+          GH_TOKEN: ${{ github.token }}
+          BERKAS: ${{ inputs.berkas }}
+        run: |
+          BERIKUT=$(jq -r '.berikut // empty' "$BERKAS")
+          if [ -n "$BERIKUT" ]; then
+            echo "Mengerjakan tugas berikutnya: $BERIKUT"
+            gh workflow run agent.yml --ref main -f "berkas=ci-agents/$BERIKUT.json"
+          else
+            echo "Tugas terakhir — rantai antrean selesai."
+          fi

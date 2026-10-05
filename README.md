@@ -81,6 +81,7 @@ Contoh systemd / PM2: `pm2 start build/index.js --name ipnu-ippnu-web`.
 
 - **CI** (`.github/workflows/ci.yml`) — jalan pada setiap push & PR: `npm ci` → `npm run check` → `npm run build` → smoke test server hasil build (8 halaman publik harus 200, rute tak dikenal 404).
 - **Tinjauan AI** (`.github/workflows/ai-review.yml`) — setiap PR otomatis ditinjau model GLM; hasilnya jadi komentar di PR. Tidak memblokir merge.
+- **Agent (GLM)** (`.github/workflows/agent.yml`) — pengembangan per-agent: **satu agent = satu run Action**. Tugas bersumber dari `ci-agents/*.json` (dibuat oleh `scripts/agent-ci/buat-antrean.mjs` dari rencana penyempurnaan + mobile). Agent mengerjakan tugas di runner (alat bash/baca/tulis berkas, uji peramban chromium), wajib lolos gerbang `check → build → smoke` sebelum hasilnya di-push, lalu otomatis melanjutkan ke tugas berikutnya. Status tiap tugas tercatat di `ci-agents/status.json`. Gagal = rantai berhenti (periksa log run).
 - **Rencana AI** (`.github/workflows/ai-tugas.yml`) — jalankan manual di tab *Actions → Run workflow*: isi deskripsi tugas, GLM menyusun rencana implementasi lalu membuat issue baru.
 - Kunci API GLM disimpan sebagai repo secret `GLM_API_KEY` (Settings → Secrets and variables → Actions) — tidak pernah ditulis di berkas repo.
 
