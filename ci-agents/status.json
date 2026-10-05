@@ -40,5 +40,11 @@
     "waktu": "2026-10-05T10:05:03Z",
     "judul": "uji:kas",
     "run": "https://github.com/muawamaditya329/ipnu-ippnu-smk-lppm-ri2/actions/runs/37293035106"
+  },
+  "008-uji-laporan-kas": {
+    "status": "selesai",
+    "waktu": "2026-10-05T10:15:43Z",
+    "judul": "uji:laporan-kas",
+    "run": "https://github.com/muawamaditya329/ipnu-ippnu-smk-lppm-ri2/actions/runs/37294262292"
   }
 }

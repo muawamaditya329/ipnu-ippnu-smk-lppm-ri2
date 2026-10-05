@@ -41,9 +41,7 @@
 		<SectionHeading nomor="01" title="Saldo Kas" />
 		<div class="aksen-kas card mt-4 px-5 py-4 sm:px-7 sm:py-5">
 			<p class="text-xs font-semibold tracking-[0.08em] text-stone-500 uppercase">
-				Buku Kas Komisariat &middot; Periode {data.bulanBerjalan.slice(0, 4)}/{Number(
-					data.bulanBerjalan.slice(5, 7)
-				)}
+				Buku Kas Komisariat &middot; Periode {namaBulan(data.bulanBerjalan)}
 			</p>
 
 			<div class="mt-4 space-y-3">
@@ -165,7 +163,14 @@
 					<tbody class="divide-y divide-stone-100">
 						{#each data.terbaru as t (t.id)}
 							<tr class="hover:bg-stone-50">
-								<td class="td text-xs whitespace-nowrap tabular-nums">{fmtTanggal(t.tanggal)}</td>
+								<td class="td text-xs whitespace-nowrap tabular-nums">
+									{fmtTanggal(t.tanggal)}
+									<!-- Catatan bertanggal setelah hari ini (mis. pencatatan awal acara)
+									     ditandai, sejalan dgn penanda "mendatang" pd rekap bulanan. -->
+									{#if t.tanggal.slice(0, 10) > hariIni()}
+										<span class="text-stone-400">&middot; mendatang</span>
+									{/if}
+								</td>
 								<td class="td max-w-sm">{t.keterangan}</td>
 								<td class="td text-stone-500">{t.kategori}</td>
 								<td class="td"
