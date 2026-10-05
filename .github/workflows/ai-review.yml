@@ -16,6 +16,7 @@ jobs:
   tinjau:
     name: Tinjau diff dengan GLM
     runs-on: ubuntu-latest
+    timeout-minutes: 300 # dibatasi 5 jam per run CI/CD
     steps:
       - uses: actions/checkout@v4
         with:

@@ -20,6 +20,7 @@ jobs:
   rencana:
     name: Susun rencana dengan GLM
     runs-on: ubuntu-latest
+    timeout-minutes: 300 # dibatasi 5 jam per run CI/CD
     steps:
       - uses: actions/checkout@v4
 
