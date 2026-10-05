@@ -27,8 +27,8 @@
 			Kartu Anggota {ipnu ? 'IPNU' : 'IPPNU'}
 		</h1>
 		<p class="mt-2 max-w-xl text-sm leading-relaxed text-stone-600">
-			Perlihatkan kartu ini saat kegiatan komisariat, atau cetak untuk disimpan. Kartu memakai blok
-			hijau penuh sebagai pengecualian resmi sistem desain.
+			Tunjukkan kartu ini saat kegiatan komisariat, atau cetak untuk disimpan. Kode QR memuat tautan
+			verifikasi keanggotaanmu — bagikan hanya kepada pengurus yang memerlukannya.
 		</p>
 	</div>
 
