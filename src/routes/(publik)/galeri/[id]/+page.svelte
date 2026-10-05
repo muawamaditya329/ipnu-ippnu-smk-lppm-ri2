@@ -1,6 +1,8 @@
 <script lang="ts">
 	import { ArrowLeft, CalendarDays, ChevronLeft, ChevronRight, Images, X } from '@lucide/svelte';
+	// ChevronLeft/Right + X dipakai lightbox; ArrowLeft untuk tautan kembali ke arsip.
 	import EmptyState from '#lib/components/ui/EmptyState.svelte';
+	import PageHeader from '#lib/components/layout/PageHeader.svelte';
 	import { fmtTanggalPendek } from '#lib/utils.ts';
 	import type { PageProps } from './$types';
 
@@ -41,34 +43,23 @@
 	<meta name="description" content={album.deskripsi ?? album.judul} />
 </svelte:head>
 
-<header class="pattern-islamic bg-primary-900 py-12 text-white">
-	<div class="mx-auto max-w-5xl px-4 sm:px-6">
-		<nav
-			class="mb-5 flex items-center gap-1.5 text-xs font-medium text-primary-200"
-			aria-label="Breadcrumb"
+<!-- Kop album: blok hijau kategori (konsisten dgn halaman publik lain) -->
+<PageHeader kicker="Galeri — Album" title={album.judul} desc={album.deskripsi ?? ''}>
+	<nav class="flex flex-wrap items-center gap-x-5 gap-y-2 text-sm text-primary-100" aria-label="Breadcrumb">
+		<a
+			href="/galeri"
+			class="inline-flex items-center gap-1.5 font-semibold text-gold-300 hover:text-gold-200"
 		>
-			<a href="/galeri" class="inline-flex items-center gap-1 hover:text-white"
-				><ArrowLeft class="h-3.5 w-3.5" /> Galeri</a
-			>
-			<ChevronRight class="h-3.5 w-3.5" />
-			<span class="text-white">Album</span>
-		</nav>
-		<h1 class="font-display text-3xl leading-tight font-extrabold sm:text-4xl">{album.judul}</h1>
-		{#if album.deskripsi}
-			<p class="mt-3 max-w-2xl text-base leading-relaxed text-primary-200">{album.deskripsi}</p>
-		{/if}
-		<div class="mt-4 flex flex-wrap items-center gap-x-5 gap-y-2 text-sm text-primary-200">
-			{#if album.tanggal}
-				<span class="inline-flex items-center gap-1.5"
-					><CalendarDays class="h-4 w-4" /> {fmtTanggalPendek(album.tanggal)}</span
-				>
-			{/if}
+			<ArrowLeft class="h-4 w-4" /> Semua album
+		</a>
+		{#if album.tanggal}
 			<span class="inline-flex items-center gap-1.5"
-				><Images class="h-4 w-4" /> {fotos.length} foto</span
+				><CalendarDays class="h-4 w-4" /> {fmtTanggalPendek(album.tanggal)}</span
 			>
-		</div>
-	</div>
-</header>
+		{/if}
+		<span class="inline-flex items-center gap-1.5"><Images class="h-4 w-4" /> {fotos.length} foto</span>
+	</nav>
+</PageHeader>
 
 <section class="mx-auto max-w-5xl px-4 py-10 sm:px-6">
 	{#if fotos.length === 0}
@@ -145,14 +136,19 @@
 			</button>
 		{/if}
 
-		<figure class="relative flex h-full flex-col items-center justify-center gap-3 p-4 sm:p-12">
+		<!-- pointer-events-none: area kosong figure tembus ke tombol latar di bawahnya,
+			 sehingga "klik area gelap utk menutup" benar-benar berfungsi; gambar/keterangan
+			 tetap dapat menerima klik lewat pointer-events-auto. -->
+		<figure
+			class="pointer-events-none relative flex h-full flex-col items-center justify-center gap-3 p-4 sm:p-12"
+		>
 			<img
 				src="/uploads/{fotoAktif.file}"
 				alt={fotoAktif.caption ?? album.judul}
-				class="mx-auto max-h-[85vh] w-auto max-w-full rounded-xl object-contain shadow-lift"
+				class="pointer-events-auto mx-auto max-h-[85vh] w-auto max-w-full rounded-lg object-contain shadow-overlay"
 			/>
 			{#if fotoAktif.caption}
-				<figcaption class="max-w-2xl text-center text-sm text-stone-200">
+				<figcaption class="pointer-events-auto max-w-2xl text-center text-sm text-stone-200">
 					{fotoAktif.caption}
 				</figcaption>
 			{/if}

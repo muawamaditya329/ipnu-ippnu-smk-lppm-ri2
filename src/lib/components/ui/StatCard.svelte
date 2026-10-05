@@ -12,36 +12,43 @@
 
 	let { label, value, icon: Icon, tone = 'green', hint = '', href }: Props = $props();
 
-	const tones: Record<string, string> = {
-		green: 'bg-primary-100 text-primary-700',
-		red: 'bg-accent-100 text-accent-700',
-		amber: 'bg-gold-100 text-gold-700',
-		blue: 'bg-sky-100 text-sky-700',
-		stone: 'bg-stone-100 text-stone-600'
+	// Gaya buku kas: garis kiri 2px berwarna, angka display besar, label kecil uppercase.
+	const aksen: Record<string, string> = {
+		green: 'aksen-ipnu',
+		red: 'aksen-ippnu',
+		amber: 'aksen-kas',
+		blue: 'border-l-2 border-l-sky-700',
+		stone: 'border-l-2 border-l-stone-400'
 	};
+
+	// Nilai uang ("Rp 2.740.000") lebih panjang dari angka polos —
+	// kecilkan sedikit agar tetap muat dalam kartu tanpa meluber.
+	const angkaPanjang = $derived(String(value).length >= 9);
 </script>
 
 {#if href}
-	<a {href} class="card flex items-center gap-4 p-5 transition hover:border-primary-300 hover:shadow-lift">
-		<SlotTengah />
+	<a {href} class="card card-hover {aksen[tone]} block p-5">
+		{@render Isi()}
 	</a>
 {:else}
-	<div class="card flex items-center gap-4 p-5">
-		<SlotTengah />
+	<div class="card {aksen[tone]} p-5">
+		{@render Isi()}
 	</div>
 {/if}
 
-{#snippet SlotTengah()}
-	{#if Icon}
-		<div class="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl {tones[tone]}">
-			<Icon class="h-6 w-6" />
-		</div>
+{#snippet Isi()}
+	<p class="kicker flex items-center gap-1.5">
+		{#if Icon}<Icon class="h-3.5 w-3.5" aria-hidden="true" />{/if}
+		{label}
+	</p>
+	<p
+		class="mt-1.5 font-display leading-none font-bold tracking-tight break-words text-stone-900 {angkaPanjang
+			? 'text-2xl'
+			: 'text-3xl'}"
+	>
+		{value}
+	</p>
+	{#if hint}
+		<p class="mt-1 truncate text-xs text-stone-500">{hint}</p>
 	{/if}
-	<div class="min-w-0">
-		<p class="truncate text-sm font-medium text-stone-500">{label}</p>
-		<p class="font-display text-2xl font-extrabold text-stone-900">{value}</p>
-		{#if hint}
-			<p class="mt-0.5 truncate text-xs text-stone-400">{hint}</p>
-		{/if}
-	</div>
 {/snippet}

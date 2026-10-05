@@ -1,12 +1,12 @@
 import { fail, redirect } from '@sveltejs/kit';
 import { db, type EventItem } from '#lib/server/db.ts';
 import { hapusUnggahan } from '#lib/server/uploads.ts';
+import { tanggalValid } from '#lib/utils.ts';
 import type { Actions, PageServerLoad } from './$types';
 
 const JENIS_AGENDA = ['rutin', 'kegiatan', 'rapat', 'kajian', 'lomba'];
 const CAKUPAN = ['umum', 'ipnu', 'ippnu'];
 const STATUS_AGENDA = ['terjadwal', 'selesai', 'dibatalkan'];
-const POLA_TANGGAL = /^\d{4}-\d{2}-\d{2}$/;
 
 export const load: PageServerLoad = async ({ url }) => {
 	const jenisParam = url.searchParams.get('jenis') ?? '';
@@ -63,16 +63,26 @@ function bacaForm(fd: FormData): { nilai: Record<string, string>; galat: Record<
 	if (!judul) galat.judul = 'Judul agenda wajib diisi.';
 	else if (judul.length > 180) galat.judul = 'Judul maksimal 180 karakter.';
 
-	if (!tanggal) galat.tanggal = 'Tanggal wajib diisi.';
-	else if (!POLA_TANGGAL.test(tanggal)) galat.tanggal = 'Format tanggal tidak valid.';
+	// Enum: kosong → nilai bawaan; terisi tapi tidak sah → galat per field.
+	if (jenisMentah && !JENIS_AGENDA.includes(jenisMentah)) galat.jenis = 'Jenis agenda tidak valid.';
+	if (cakupanMentah && !CAKUPAN.includes(cakupanMentah)) galat.cakupan = 'Cakupan tidak valid.';
+	if (statusMentah && !STATUS_AGENDA.includes(statusMentah))
+		galat.status = 'Status agenda tidak valid.';
 
-	if (jamMentah && !/^\d{2}:\d{2}(:\d{2})?$/.test(jamMentah)) {
+	// tanggalValid menolak tanggal yang polanya cocok tapi tidak ada di kalender
+	// (mis. '2026-02-31') — bukan hanya mengecek pola YYYY-MM-DD.
+	if (!tanggal) galat.tanggal = 'Tanggal wajib diisi.';
+	else if (!tanggalValid(tanggal)) galat.tanggal = 'Tanggal tidak valid.';
+
+	if (jamMentah && !/^([01]\d|2[0-3]):[0-5]\d(:[0-5]\d)?$/.test(jamMentah)) {
 		galat.jam = 'Format jam tidak valid (contoh: 16:00).';
 	}
 
+	if (lokasi.length > 160) galat.lokasi = 'Lokasi maksimal 160 karakter.';
+
 	if (tanggalSelesai) {
-		if (!POLA_TANGGAL.test(tanggalSelesai)) {
-			galat.tanggal_selesai = 'Format tanggal tidak valid.';
+		if (!tanggalValid(tanggalSelesai)) {
+			galat.tanggal_selesai = 'Tanggal tidak valid.';
 		} else if (!galat.tanggal && tanggalSelesai < tanggal) {
 			galat.tanggal_selesai = 'Tanggal selesai tidak boleh sebelum tanggal mulai.';
 		}
@@ -148,14 +158,19 @@ export const actions: Actions = {
 		if (!locals.user) redirect(303, '/masuk');
 
 		const id = Number(url.searchParams.get('id'));
+		if (!Number.isInteger(id) || id <= 0) {
+			return fail(404, { galat: { umum: 'Agenda tidak ditemukan.' } });
+		}
+
 		const agenda = db.prepare('SELECT id, poster FROM events WHERE id = ?').get(id) as
 			{ id: number; poster: string | null } | undefined;
 
 		if (agenda) {
 			hapusUnggahan(agenda.poster);
 			db.prepare('DELETE FROM events WHERE id = ?').run(id);
+			return { sukses: true, pesan: 'Agenda berhasil dihapus.' };
 		}
 
-		return { sukses: true, pesan: 'Agenda berhasil dihapus.' };
+		return fail(404, { galat: { umum: 'Agenda tidak ditemukan atau sudah dihapus.' } });
 	}
 };

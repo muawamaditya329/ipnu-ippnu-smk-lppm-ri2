@@ -1,4 +1,5 @@
 import { db, type Post } from '#lib/server/db.ts';
+import { escapeLike, keNomorHalaman } from '#lib/utils.ts';
 import type { PageServerLoad } from './$types';
 
 const PER_HALAMAN = 9;
@@ -6,13 +7,13 @@ const PER_HALAMAN = 9;
 export const load: PageServerLoad = async ({ url }) => {
 	const q = (url.searchParams.get('q') ?? '').trim();
 	const cakupan = url.searchParams.get('cakupan') ?? '';
-	const halaman = Math.max(1, Number(url.searchParams.get('halaman')) || 1);
+	const mintaHalaman = keNomorHalaman(url.searchParams.get('halaman'));
 
 	const syarat: string[] = ["status = 'terbit'"];
 	const nilai: unknown[] = [];
 	if (q) {
-		syarat.push('(judul LIKE ? OR ringkasan LIKE ?)');
-		nilai.push(`%${q}%`, `%${q}%`);
+		syarat.push("(judul LIKE ? ESCAPE '\\' OR ringkasan LIKE ? ESCAPE '\\')");
+		nilai.push(`%${escapeLike(q)}%`, `%${escapeLike(q)}%`);
 	}
 	if (cakupan === 'ipnu' || cakupan === 'ippnu') {
 		syarat.push('cakupan = ?');
@@ -20,8 +21,12 @@ export const load: PageServerLoad = async ({ url }) => {
 	}
 	const where = `WHERE ${syarat.join(' AND ')}`;
 
-	const total = (db.prepare(`SELECT COUNT(*) AS n FROM posts ${where}`).get(...nilai) as { n: number }).n;
+	const total = (
+		db.prepare(`SELECT COUNT(*) AS n FROM posts ${where}`).get(...nilai) as { n: number }
+	).n;
 	const totalHalaman = Math.max(1, Math.ceil(total / PER_HALAMAN));
+	// Jepit nomor halaman agar ?halaman=99 tidak menampilkan daftar kosong.
+	const halaman = Math.min(mintaHalaman, totalHalaman);
 
 	const posts = db
 		.prepare(

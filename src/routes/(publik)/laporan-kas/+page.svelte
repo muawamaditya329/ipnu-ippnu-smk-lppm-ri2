@@ -1,64 +1,89 @@
 <script lang="ts">
-	import { Info, TrendingDown, TrendingUp, Wallet } from '@lucide/svelte';
 	import EmptyState from '#lib/components/ui/EmptyState.svelte';
+	import PageHeader from '#lib/components/layout/PageHeader.svelte';
 	import SectionHeading from '#lib/components/ui/SectionHeading.svelte';
-	import { fmtRp, fmtTanggal } from '#lib/utils.ts';
+	import { fmtRp, fmtTanggal, hariIni } from '#lib/utils.ts';
 	import type { PageProps } from './$types';
 
 	let { data }: PageProps = $props();
 
-	/** '2026-10' -> 'Oktober 2026' */
-	const fmtBulan = new Intl.DateTimeFormat('id-ID', { month: 'long', year: 'numeric', timeZone: 'UTC' });
-	const namaBulan = (b: string) => fmtBulan.format(new Date(`${b}-01T00:00:00Z`));
+	/** '2026-10' -> 'Oktober 2026'; bulan di luar jangkauan kalender tampil apa adanya. */
+	const fmtBulan = new Intl.DateTimeFormat('id-ID', {
+		month: 'long',
+		year: 'numeric',
+		timeZone: 'UTC'
+	});
+	const namaBulan = (b: string) => {
+		const d = new Date(`${b}-01T00:00:00Z`);
+		return Number.isNaN(d.getTime()) ? b : fmtBulan.format(d);
+	};
 
 	const saldo = $derived(data.totalMasuk - data.totalKeluar);
 </script>
 
 <svelte:head>
 	<title>Laporan Kas — IPNU IPPNU SMK LPPM RI 2 Kedungreja</title>
-	<meta name="description" content="Laporan kas terbuka Komisariat IPNU & IPPNU SMK LPPM RI 2 Kedungreja: total pemasukan, pengeluaran, saldo, dan rekap bulanan." />
+	<meta
+		name="description"
+		content="Laporan kas terbuka Komisariat IPNU & IPPNU SMK LPPM RI 2 Kedungreja: total pemasukan, pengeluaran, saldo, dan rekap bulanan."
+	/>
 </svelte:head>
 
-<section class="pattern-islamic bg-primary-900 py-14 text-white">
-	<div class="mx-auto max-w-6xl px-4 sm:px-6">
+<PageHeader
+	kicker="Keuangan Komisariat"
+	title="Laporan Kas"
+	desc="Kas organisasi dikelola secara amanah dan dilaporkan terbuka kepada seluruh anggota — setiap pemasukan dan pengeluaran dibukukan bendahara."
+/>
+
+<section class="mx-auto max-w-4xl px-4 py-10 sm:px-6">
+	<!-- Nota saldo: gaya buku kas — baris bergaris, angka tabular, total dgn garis ganda -->
+	<section aria-label="Ringkasan kas">
+		<SectionHeading nomor="01" title="Saldo Kas" />
+		<div class="aksen-kas card mt-4 px-5 py-4 sm:px-7 sm:py-5">
+			<p class="text-xs font-semibold tracking-[0.08em] text-stone-500 uppercase">
+				Buku Kas Komisariat &middot; Periode {data.bulanBerjalan.slice(0, 4)}/{Number(
+					data.bulanBerjalan.slice(5, 7)
+				)}
+			</p>
+
+			<div class="mt-4 space-y-3">
+				<div class="flex items-baseline gap-3">
+					<span class="text-sm text-stone-600">Total Pemasukan</span>
+					<span class="flex-1 border-b border-dotted border-stone-300" aria-hidden="true"></span>
+					<span class="font-display text-lg font-bold tabular-nums text-primary-800 sm:text-xl">
+						{fmtRp(data.totalMasuk)}
+					</span>
+				</div>
+				<div class="flex items-baseline gap-3">
+					<span class="text-sm text-stone-600">Total Pengeluaran</span>
+					<span class="flex-1 border-b border-dotted border-stone-300" aria-hidden="true"></span>
+					<span class="font-display text-lg font-bold tabular-nums text-accent-800 sm:text-xl">
+						{fmtRp(data.totalKeluar)}
+					</span>
+				</div>
+			</div>
+
+			<!-- Total: garis ganda khas nota -->
+			<div class="mt-4 flex items-baseline gap-3 border-t-4 border-double border-stone-900 pt-3">
+				<span class="text-sm font-bold tracking-[0.08em] text-stone-900 uppercase">Saldo Kas</span>
+				<span class="flex-1" aria-hidden="true"></span>
+				<span class="font-display text-2xl font-bold tabular-nums text-stone-900 sm:text-3xl">
+					{fmtRp(saldo)}
+				</span>
+			</div>
+			<p class="mt-2 text-xs text-stone-500">
+				Dihitung dari seluruh riwayat transaksi s.d. {fmtTanggal(hariIni())} WIB.
+			</p>
+		</div>
+	</section>
+
+	<!-- Rekap bulanan -->
+	<section class="mt-12" aria-label="Rekap bulanan">
 		<SectionHeading
-			eyebrow="Transparansi"
-			title="Laporan Kas"
-			desc="Kas organisasi dikelola secara amanah dan dilaporkan terbuka kepada seluruh anggota."
+			nomor="02"
+			title="Rekap Bulanan"
+			desc="Dua belas bulan terakhir; saldo dihitung kumulatif dari seluruh riwayat kas."
 		/>
-	</div>
-</section>
-
-<section class="mx-auto max-w-6xl px-4 py-10 sm:px-6">
-	<!-- Ringkasan angka besar -->
-	<div class="grid gap-5 sm:grid-cols-3">
-		<div class="card p-6">
-			<div class="flex h-11 w-11 items-center justify-center rounded-xl bg-primary-100 text-primary-700">
-				<TrendingUp class="h-5 w-5" />
-			</div>
-			<p class="mt-4 text-sm font-medium text-stone-500">Total Pemasukan</p>
-			<p class="font-display text-3xl font-extrabold text-primary-700">{fmtRp(data.totalMasuk)}</p>
-		</div>
-		<div class="card p-6">
-			<div class="flex h-11 w-11 items-center justify-center rounded-xl bg-accent-100 text-accent-700">
-				<TrendingDown class="h-5 w-5" />
-			</div>
-			<p class="mt-4 text-sm font-medium text-stone-500">Total Pengeluaran</p>
-			<p class="font-display text-3xl font-extrabold text-accent-700">{fmtRp(data.totalKeluar)}</p>
-		</div>
-		<div class="card p-6">
-			<div class="flex h-11 w-11 items-center justify-center rounded-xl bg-primary-900 text-white">
-				<Wallet class="h-5 w-5" />
-			</div>
-			<p class="mt-4 text-sm font-medium text-stone-500">Saldo Saat Ini</p>
-			<p class="font-display text-3xl font-extrabold text-primary-900">{fmtRp(saldo)}</p>
-		</div>
-	</div>
-
-	<!-- Rekap bulanan (12 bulan terakhir, saldo kumulatif) -->
-	<div class="mt-10">
-		<h2 class="font-display text-xl font-bold text-stone-900">Rekap Bulanan</h2>
-		<p class="mt-1 text-sm text-stone-500">Rincian 12 bulan terakhir — saldo dihitung kumulatif dari seluruh riwayat kas.</p>
 		<div class="card mt-4 overflow-x-auto">
 			<table class="w-full min-w-[560px]">
 				<thead class="border-b border-stone-200 bg-stone-50">
@@ -72,25 +97,55 @@
 				<tbody class="divide-y divide-stone-100">
 					{#each data.rekap as r (r.bulan)}
 						<tr class="hover:bg-stone-50">
-							<td class="td font-semibold text-stone-900">{namaBulan(r.bulan)}</td>
-							<td class="td text-right {r.masuk ? 'text-primary-700' : 'text-stone-400'}">{fmtRp(r.masuk)}</td>
-							<td class="td text-right {r.keluar ? 'text-accent-700' : 'text-stone-400'}">{fmtRp(r.keluar)}</td>
-							<td class="td text-right font-bold {r.saldo < 0 ? 'text-accent-700' : 'text-stone-900'}">{fmtRp(r.saldo)}</td>
+							<td class="td font-semibold text-stone-900">
+								{namaBulan(r.bulan)}
+								{#if r.bulan > data.bulanBerjalan}
+									<span class="text-xs font-normal text-stone-400">&middot; mendatang</span>
+								{/if}
+							</td>
+							<td class="td text-right tabular-nums {r.masuk ? 'text-primary-700' : 'text-stone-400'}"
+								>{fmtRp(r.masuk)}</td
+							>
+							<td class="td text-right tabular-nums {r.keluar ? 'text-accent-700' : 'text-stone-400'}"
+								>{fmtRp(r.keluar)}</td
+							>
+							<td
+								class="td text-right font-bold tabular-nums {r.saldo < 0
+									? 'text-accent-700'
+									: 'text-stone-900'}"
+								>{fmtRp(r.saldo)}</td
+							>
 						</tr>
 					{/each}
 				</tbody>
+				<tfoot>
+					<tr class="border-t-4 border-double border-stone-900">
+						<td class="td text-[11px] font-semibold tracking-[0.08em] text-stone-900 uppercase">
+							Seluruh riwayat
+						</td>
+						<td class="td text-right font-bold tabular-nums text-primary-800">
+							{fmtRp(data.totalMasuk)}
+						</td>
+						<td class="td text-right font-bold tabular-nums text-accent-800">
+							{fmtRp(data.totalKeluar)}
+						</td>
+						<td class="td text-right font-bold tabular-nums text-stone-900">{fmtRp(saldo)}</td>
+					</tr>
+				</tfoot>
 			</table>
 		</div>
-	</div>
+	</section>
 
 	<!-- Transaksi terbaru -->
-	<div class="mt-10">
-		<h2 class="font-display text-xl font-bold text-stone-900">Transaksi Terbaru</h2>
-		<p class="mt-1 text-sm text-stone-500">15 catatan kas terakhir yang dibukukan bendahara.</p>
+	<section class="mt-12" aria-label="Transaksi terbaru">
+		<SectionHeading
+			nomor="03"
+			title="Transaksi Terbaru"
+			desc="Lima belas catatan kas terakhir yang dibukukan bendahara."
+		/>
 		{#if data.terbaru.length === 0}
 			<div class="mt-4">
 				<EmptyState
-					icon={Wallet}
 					title="Belum ada transaksi"
 					desc="Catatan kas akan tampil di sini setelah bendahara membukukan pemasukan atau pengeluaran."
 				/>
@@ -110,12 +165,20 @@
 					<tbody class="divide-y divide-stone-100">
 						{#each data.terbaru as t (t.id)}
 							<tr class="hover:bg-stone-50">
-								<td class="td whitespace-nowrap text-xs">{fmtTanggal(t.tanggal)}</td>
+								<td class="td text-xs whitespace-nowrap tabular-nums">{fmtTanggal(t.tanggal)}</td>
 								<td class="td max-w-sm">{t.keterangan}</td>
-								<td class="td">{t.kategori}</td>
-								<td class="td"><span class="badge {t.jenis === 'masuk' ? 'badge-green' : 'badge-red'}">{t.jenis === 'masuk' ? 'Masuk' : 'Keluar'}</span></td>
-								<td class="td text-right font-semibold {t.jenis === 'masuk' ? 'text-primary-700' : 'text-accent-700'}">
-									{t.jenis === 'masuk' ? '+' : '-'}{fmtRp(t.jumlah)}
+								<td class="td text-stone-500">{t.kategori}</td>
+								<td class="td"
+									><span class="badge {t.jenis === 'masuk' ? 'badge-green' : 'badge-red'}"
+										>{t.jenis === 'masuk' ? 'Masuk' : 'Keluar'}</span
+									></td
+								>
+								<td
+									class="td text-right font-semibold tabular-nums {t.jenis === 'masuk'
+										? 'text-primary-700'
+										: 'text-accent-700'}"
+								>
+									{t.jenis === 'masuk' ? '+' : '−'}{fmtRp(t.jumlah)}
 								</td>
 							</tr>
 						{/each}
@@ -123,10 +186,10 @@
 				</table>
 			</div>
 		{/if}
-	</div>
+	</section>
 
-	<p class="hint mt-8 flex items-start gap-1.5">
-		<Info class="mt-0.5 h-3.5 w-3.5 shrink-0" />
-		Iuran per anggota tidak ditampilkan demi privasi. Pertanyaan? Hubungi bendahara.
+	<p class="hint mt-8">
+		Iuran per anggota tidak ditampilkan demi privasi. Pertanyaan seputar kas dapat disampaikan
+		kepada bendahara melalui kontak pada footer halaman.
 	</p>
 </section>

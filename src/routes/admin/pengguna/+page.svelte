@@ -3,6 +3,7 @@
 	import EmptyState from '#lib/components/ui/EmptyState.svelte';
 	import Modal from '#lib/components/ui/Modal.svelte';
 	import { fmtWaktu, inisial } from '#lib/utils.ts';
+	import { kirimJikaSetuju } from '#lib/konfirmasi.svelte.ts';
 	import type { PageProps } from './$types';
 
 	let { data, form }: PageProps = $props();
@@ -111,7 +112,7 @@
 						<td class="td">
 							<div class="flex items-center gap-3">
 								<span
-									class="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primary-100 font-display text-xs font-extrabold text-primary-800"
+									class="flex h-9 w-9 shrink-0 items-center justify-center border border-primary-800/30 bg-primary-50 font-display text-xs font-bold text-primary-900"
 								>
 									{inisial(u.nama)}
 								</span>
@@ -149,13 +150,12 @@
 										method="POST"
 										action="?/toggle&id={u.id}"
 										onsubmit={(e) => {
-											if (
-												u.aktif &&
-												!confirm(
-													`Nonaktifkan akun "${u.nama}"? Pengguna tidak bisa masuk sampai diaktifkan kembali.`
-												)
-											)
-												e.preventDefault();
+											if (u.aktif)
+												kirimJikaSetuju(e, {
+													judul: 'Nonaktifkan Akun',
+													pesan: `Nonaktifkan akun "${u.nama}"? Pengguna tidak bisa masuk sampai diaktifkan kembali.`,
+													tombol: 'Nonaktifkan'
+												});
 										}}
 									>
 										<button class="btn btn-outline btn-sm" type="submit">
@@ -166,9 +166,12 @@
 									<form
 										method="POST"
 										action="?/hapus&id={u.id}"
-										onsubmit={(e) => {
-											if (!confirm(`Hapus akun "${u.nama}" secara permanen?`)) e.preventDefault();
-										}}
+										onsubmit={(e) =>
+											kirimJikaSetuju(e, {
+												judul: 'Hapus Akun',
+												pesan: `Hapus akun "${u.nama}" secara permanen?`,
+												tombol: 'Hapus'
+											})}
 									>
 										<button class="btn btn-danger btn-sm" aria-label="Hapus {u.nama}"
 											><Trash2 class="h-3.5 w-3.5" /></button

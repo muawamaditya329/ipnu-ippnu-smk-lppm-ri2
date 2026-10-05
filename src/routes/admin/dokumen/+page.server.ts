@@ -1,7 +1,7 @@
 import { fail, redirect } from '@sveltejs/kit';
 import { db, type DocumentItem } from '#lib/server/db.ts';
 import { hapusUnggahan, simpanUnggahan, UploadError } from '#lib/server/uploads.ts';
-import { KATEGORI_DOKUMEN } from '#lib/utils.ts';
+import { KATEGORI_DOKUMEN, escapeLike } from '#lib/utils.ts';
 import type { Actions, PageServerLoad } from './$types';
 
 type NilaiDokumen = { judul: string; deskripsi: string; kategori: string };
@@ -25,8 +25,10 @@ export const load: PageServerLoad = async ({ url }) => {
 	const syarat: string[] = [];
 	const nilai: unknown[] = [];
 	if (q) {
-		syarat.push('(judul LIKE ? OR deskripsi LIKE ? OR nama_file LIKE ?)');
-		nilai.push(`%${q}%`, `%${q}%`, `%${q}%`);
+		syarat.push(
+			"(judul LIKE ? ESCAPE '\\' OR deskripsi LIKE ? ESCAPE '\\' OR nama_file LIKE ? ESCAPE '\\')"
+		);
+		nilai.push(`%${escapeLike(q)}%`, `%${escapeLike(q)}%`, `%${escapeLike(q)}%`);
 	}
 	const where = syarat.length ? `WHERE ${syarat.join(' AND ')}` : '';
 
@@ -56,47 +58,72 @@ export const actions: Actions = {
 		const file = fd.get('file');
 		const berkas = file instanceof File && file.size > 0 ? file : null;
 
-		if (!judul) {
-			return fail(400, {
-				sukses: false,
-				terhapus: false,
-				galat: { judul: 'Judul dokumen wajib diisi.' },
-				mode: 'buat',
-				id: null,
-				nilai
-			} satisfies HasilDokumen);
+		// Semua field diperiksa sekaligus agar galat tampil per field, bukan satu per kirim.
+		const galat: Record<string, string> = {};
+		if (!judul) galat.judul = 'Judul dokumen wajib diisi.';
+		else if (judul.length > 180) galat.judul = 'Judul maksimal 180 karakter.';
+		if (deskripsi.length > 400) galat.deskripsi = 'Deskripsi maksimal 400 karakter.';
+		if (kategoriRaw && !KATEGORI_DOKUMEN.includes(kategoriRaw)) {
+			galat.kategori = 'Kategori tidak valid.';
 		}
-		if (!berkas) {
+
+		/** Hasil unggahan (path + metadata file) — null bila file tidak/belum tersimpan. */
+		let tersimpan: { path: string; nama: string; ukuran: number } | null = null;
+		if (berkas) {
+			try {
+				tersimpan = {
+					path: await simpanUnggahan(berkas, 'dokumen', 'dokumen'),
+					nama: berkas.name,
+					ukuran: berkas.size
+				};
+			} catch (e) {
+				if (e instanceof UploadError) {
+					return fail(400, {
+						sukses: false,
+						terhapus: false,
+						galat: { file: e.message },
+						mode: 'buat',
+						id: null,
+						nilai
+					} satisfies HasilDokumen);
+				}
+				throw e;
+			}
+		} else {
+			galat.file = 'Pilih file dokumen yang akan diunggah.';
+		}
+
+		if (Object.keys(galat).length) {
 			return fail(400, {
 				sukses: false,
 				terhapus: false,
-				galat: { file: 'Pilih file dokumen yang akan diunggah.' },
+				galat,
 				mode: 'buat',
 				id: null,
 				nilai
 			} satisfies HasilDokumen);
 		}
 
-		let path: string;
+		// tersimpan pasti terisi: galat.file (berkas kosong) sudah dikembalikan di atas.
+		const unggah = tersimpan as { path: string; nama: string; ukuran: number };
+
 		try {
-			path = await simpanUnggahan(berkas, 'dokumen', 'dokumen');
+			db.prepare(
+				'INSERT INTO documents (judul, deskripsi, kategori, file, nama_file, ukuran) VALUES (?, ?, ?, ?, ?, ?)'
+			).run(
+				judul,
+				deskripsi || null,
+				rapiKategori(kategoriRaw),
+				unggah.path,
+				unggah.nama,
+				unggah.ukuran
+			);
 		} catch (e) {
-			if (e instanceof UploadError) {
-				return fail(400, {
-					sukses: false,
-					terhapus: false,
-					galat: { file: e.message },
-					mode: 'buat',
-					id: null,
-					nilai
-				} satisfies HasilDokumen);
-			}
+			// Gagal menulis baris: berkas yang sudah tersimpan di disk ikut dihapus
+			// agar tidak menjadi orphan tanpa pemilik.
+			hapusUnggahan(unggah.path);
 			throw e;
 		}
-
-		db.prepare(
-			'INSERT INTO documents (judul, deskripsi, kategori, file, nama_file, ukuran) VALUES (?, ?, ?, ?, ?, ?)'
-		).run(judul, deskripsi || null, rapiKategori(kategoriRaw), path, berkas.name, berkas.size);
 
 		return {
 			sukses: true,
@@ -132,18 +159,26 @@ export const actions: Actions = {
 		const kategoriRaw = String(fd.get('kategori') ?? '').trim();
 		const nilai: NilaiDokumen = { judul, deskripsi, kategori: kategoriRaw };
 
-		if (!judul) {
+		const galat: Record<string, string> = {};
+		if (!judul) galat.judul = 'Judul dokumen wajib diisi.';
+		else if (judul.length > 180) galat.judul = 'Judul maksimal 180 karakter.';
+		if (deskripsi.length > 400) galat.deskripsi = 'Deskripsi maksimal 400 karakter.';
+		if (kategoriRaw && !KATEGORI_DOKUMEN.includes(kategoriRaw)) {
+			galat.kategori = 'Kategori tidak valid.';
+		}
+		if (Object.keys(galat).length) {
 			return fail(400, {
 				sukses: false,
 				terhapus: false,
-				galat: { judul: 'Judul dokumen wajib diisi.' },
+				galat,
 				mode: 'ubah',
 				id: lama.id,
 				nilai
 			} satisfies HasilDokumen);
 		}
 
-		// File opsional saat ubah: diisi → ganti file lama (file lamanya ikut dihapus).
+		// File opsional saat ubah: diisi → ganti file lama (file lamanya ikut dihapus
+		// SETELAH baris berhasil diperbarui, bukan sebelumnya).
 		const file = fd.get('file');
 		if (file instanceof File && file.size > 0) {
 			let path: string;
@@ -163,18 +198,27 @@ export const actions: Actions = {
 				throw e;
 			}
 
-			hapusUnggahan(lama.file);
-			db.prepare(
-				'UPDATE documents SET judul = ?, deskripsi = ?, kategori = ?, file = ?, nama_file = ?, ukuran = ? WHERE id = ?'
-			).run(
-				judul,
-				deskripsi || null,
-				rapiKategori(kategoriRaw),
-				path,
-				file.name,
-				file.size,
-				lama.id
-			);
+			try {
+				db.prepare(
+					'UPDATE documents SET judul = ?, deskripsi = ?, kategori = ?, file = ?, nama_file = ?, ukuran = ? WHERE id = ?'
+				).run(
+					judul,
+					deskripsi || null,
+					rapiKategori(kategoriRaw),
+					path,
+					file.name,
+					file.size,
+					lama.id
+				);
+			} catch (e) {
+				// Gagal memperbarui baris: batalkan file baru agar tidak jadi orphan;
+				// file lama tetap dirujuk DB sehingga tidak boleh dihapus di sini.
+				hapusUnggahan(path);
+				throw e;
+			}
+
+			// Baris sudah aman menunjuk file baru → baru file lama dihapus dari disk.
+			if (lama.file !== path) hapusUnggahan(lama.file);
 		} else {
 			db.prepare('UPDATE documents SET judul = ?, deskripsi = ?, kategori = ? WHERE id = ?').run(
 				judul,

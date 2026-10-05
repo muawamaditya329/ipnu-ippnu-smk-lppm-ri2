@@ -4,6 +4,7 @@
 		Download,
 		GraduationCap,
 		IdCard,
+		KeyRound,
 		Search,
 		Trash2,
 		UserCheck,
@@ -11,12 +12,41 @@
 		Users
 	} from '@lucide/svelte';
 	import EmptyState from '#lib/components/ui/EmptyState.svelte';
+	import Modal from '#lib/components/ui/Modal.svelte';
 	import Pagination from '#lib/components/ui/Pagination.svelte';
 	import StatCard from '#lib/components/ui/StatCard.svelte';
+	import { SvelteURLSearchParams } from 'svelte/reactivity';
 	import { fmtTanggalPendek, LABEL_STATUS_MEMBER, toneStatusMember } from '#lib/utils.ts';
+	import { kirimJikaSetuju } from '#lib/konfirmasi.svelte.ts';
 	import type { PageProps } from './$types';
 
 	let { data, form }: PageProps = $props();
+
+	// Galat per isian dari action ?/password (null bila aksi lain / tidak gagal).
+	const galatSandi = $derived((form?.galat ?? null) as Record<string, string> | null);
+
+	// --- Modal atur password akun anggota ---
+	let sandiId = $state<number | null>(null);
+	let sandiNama = $state('');
+	let memprosesSandi = $state(false);
+
+	function bukaAturSandi(id: number, nama: string) {
+		sandiId = id;
+		sandiNama = nama;
+		memprosesSandi = false;
+	}
+
+	// Sinkron hasil aksi server: sukses → tutup modal; gagal validasi → buka ulang.
+	$effect(() => {
+		if (!form) return;
+		memprosesSandi = false;
+		if (form.sukses) {
+			sandiId = null;
+		} else if (form.anggotaId != null) {
+			sandiId = form.anggotaId;
+			sandiNama = form.anggotaNama ?? '';
+		}
+	});
 
 	const opsiStatus = [
 		{ nilai: '', label: 'Semua status' },
@@ -33,7 +63,7 @@
 	];
 
 	const hrefFilter = (jk: string) => {
-		const sp = new URLSearchParams();
+		const sp = new SvelteURLSearchParams();
 		if (data.q) sp.set('q', data.q);
 		if (data.status) sp.set('status', data.status);
 		if (jk) sp.set('jk', jk);
@@ -42,7 +72,7 @@
 	};
 
 	const hrefHalaman = (p: number) => {
-		const sp = new URLSearchParams();
+		const sp = new SvelteURLSearchParams();
 		if (data.q) sp.set('q', data.q);
 		if (data.status) sp.set('status', data.status);
 		if (data.jk) sp.set('jk', data.jk);
@@ -218,7 +248,25 @@
 								<span class="badge {a.jenis_kelamin === 'L' ? 'badge-green' : 'badge-red'}">
 									{a.jenis_kelamin === 'L' ? 'Putra' : 'Putri'}
 								</span>
+								<!-- Indikator akun login anggota (dari keberadaan password_hash) -->
+								<span
+									class="badge {a.punya_akun ? 'badge-blue' : 'badge-gray'}"
+									title={a.punya_akun
+										? 'Sudah punya akun — bisa masuk dengan NIS + password'
+										: 'Belum punya password akun'}
+								>
+									{a.punya_akun ? 'Ada akun' : 'Tanpa akun'}
+								</span>
 							</div>
+							<!-- Motivasi ditulis calon anggota saat mendaftar; teks polos (aman XSS) -->
+							{#if a.motivasi}
+								<p
+									class="mt-1 line-clamp-2 max-w-[20rem] text-xs leading-relaxed text-stone-500"
+									title={a.motivasi}
+								>
+									{a.motivasi}
+								</p>
+							{/if}
 						</td>
 						<td class="td text-xs">{a.kelas ?? '—'} · {a.jurusan ?? '—'}</td>
 						<td class="td text-xs">{a.no_hp ?? '—'}</td>
@@ -239,29 +287,39 @@
 									<form
 										method="POST"
 										action="?/tolak&id={a.id}"
-										onsubmit={(e) => {
-											if (!confirm(`Tolak pendaftaran ${a.nama}?`)) e.preventDefault();
-										}}
+										onsubmit={(e) =>
+											kirimJikaSetuju(e, {
+												judul: 'Tolak Pendaftaran',
+												pesan: `Tolak pendaftaran ${a.nama}? Pendaftar dapat melihat statusnya lewat halaman cek status.`,
+												tombol: 'Tolak'
+											})}
 									>
 										<button class="btn btn-danger btn-sm" type="submit">
 											<UserX class="h-3.5 w-3.5" /> Tolak
 										</button>
 									</form>
 								{:else if a.status === 'aktif'}
-									<a
-										href="/kartu/{encodeURIComponent(a.no_reg ?? '')}"
-										class="btn btn-outline btn-sm"
-										target="_blank"
-										rel="noopener"
-									>
-										<IdCard class="h-3.5 w-3.5" /> Kartu
-									</a>
+									{#if a.no_reg && a.token_kartu}
+										<!-- Token menyertai tautan: /kartu menolak akses tanpa token -->
+										<a
+											href="/kartu/{encodeURIComponent(a.no_reg)}?token={a.token_kartu}"
+											class="btn btn-outline btn-sm"
+											target="_blank"
+											rel="noopener"
+										>
+											<IdCard class="h-3.5 w-3.5" /> Kartu
+										</a>
+									{/if}
 									<form
 										method="POST"
 										action="?/alumni&id={a.id}"
-										onsubmit={(e) => {
-											if (!confirm(`Jadikan ${a.nama} sebagai alumni?`)) e.preventDefault();
-										}}
+										onsubmit={(e) =>
+											kirimJikaSetuju(e, {
+												judul: 'Ubah Status',
+												pesan: `Jadikan ${a.nama} sebagai alumni? Nomor registrasinya tetap tersimpan.`,
+												tombol: 'Jadikan Alumni',
+												bahaya: false
+											})}
 									>
 										<button class="btn btn-outline btn-sm" type="submit">
 											<GraduationCap class="h-3.5 w-3.5" /> Alumni
@@ -274,12 +332,22 @@
 										</button>
 									</form>
 								{/if}
+								<button
+									class="btn btn-outline btn-sm"
+									type="button"
+									onclick={() => bukaAturSandi(a.id, a.nama)}
+								>
+									<KeyRound class="h-3.5 w-3.5" /> Atur Password
+								</button>
 								<form
 									method="POST"
 									action="?/hapus&id={a.id}"
-									onsubmit={(e) => {
-										if (!confirm(`Hapus data ${a.nama} secara permanen?`)) e.preventDefault();
-									}}
+									onsubmit={(e) =>
+										kirimJikaSetuju(e, {
+											judul: 'Hapus Anggota',
+											pesan: `Hapus data ${a.nama} secara permanen? Seluruh datanya akan hilang.`,
+											tombol: 'Hapus'
+										})}
 								>
 									<button class="btn btn-danger btn-sm" aria-label="Hapus {a.nama}">
 										<Trash2 class="h-3.5 w-3.5" />
@@ -294,3 +362,46 @@
 	</div>
 	<Pagination page={data.halaman} totalPages={data.totalHalaman} href={hrefHalaman} />
 {/if}
+
+<!-- Modal atur password akun anggota -->
+<Modal
+	open={sandiId !== null}
+	title={sandiNama ? `Atur Password — ${sandiNama}` : 'Atur Password'}
+	onclose={() => (sandiId = null)}
+>
+	<form
+		method="POST"
+		action={sandiId !== null ? `?/password&id=${sandiId}` : '?/password'}
+		class="space-y-4"
+		onsubmit={() => (memprosesSandi = true)}
+	>
+		<p class="text-sm text-stone-500">
+			Tentukan password akun untuk <b>{sandiNama || 'anggota ini'}</b>. Anggota masuk dengan
+			<b>NIS</b>-nya sebagai nama akun lewat tab <b>Anggota</b> di halaman Masuk.
+		</p>
+		<div>
+			<label class="label" for="sandi-anggota"
+				>Password akun <span class="text-accent-600">*</span></label
+			>
+			<input
+				id="sandi-anggota"
+				name="password"
+				type="password"
+				required
+				minlength="6"
+				maxlength="128"
+				autocomplete="new-password"
+				class="input {galatSandi?.password ? 'input-error' : ''}"
+				placeholder="Minimal 6 karakter"
+			/>
+			{#if galatSandi?.password}<p class="error-text">{galatSandi.password}</p>{/if}
+		</div>
+		<p class="hint">Mengganti password memutus sesi anggota yang masih memakai akses lama.</p>
+		<div class="flex items-center justify-end gap-3 pt-1">
+			<button type="button" class="btn btn-ghost" onclick={() => (sandiId = null)}>Batal</button>
+			<button class="btn btn-primary" type="submit" disabled={memprosesSandi}
+				>{memprosesSandi ? 'Menyimpan…' : 'Simpan Password'}</button
+			>
+		</div>
+	</form>
+</Modal>

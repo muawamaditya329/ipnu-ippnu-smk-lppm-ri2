@@ -1,6 +1,7 @@
 import { fail, redirect } from '@sveltejs/kit';
 import { db, type Album, type Photo } from '#lib/server/db.ts';
 import { hapusUnggahan, simpanUnggahan, UploadError } from '#lib/server/uploads.ts';
+import { tanggalValid } from '#lib/utils.ts';
 import type { Actions, PageServerLoad } from './$types';
 
 type NilaiAlbum = { judul: string; deskripsi: string; tanggal: string };
@@ -19,7 +20,8 @@ type HasilGaleri = {
 	nilai: NilaiAlbum | null;
 };
 
-const tanggalValid = (s: string) => /^\d{4}-\d{2}-\d{2}$/.test(s);
+// Tanggal album divalidasi dgn tanggalValid dari #lib/utils — menolak tanggal
+// yang polanya cocok tapi tidak ada di kalender (mis. '2026-02-31').
 
 export const load: PageServerLoad = async () => {
 	const albums = db
@@ -51,6 +53,8 @@ export const actions: Actions = {
 
 		const galat: Record<string, string> = {};
 		if (!judul) galat.judul = 'Judul album wajib diisi.';
+		else if (judul.length > 150) galat.judul = 'Judul album maksimal 150 karakter.';
+		if (deskripsi.length > 400) galat.deskripsi = 'Deskripsi maksimal 400 karakter.';
 		if (tanggal && !tanggalValid(tanggal)) galat.tanggal = 'Tanggal tidak valid.';
 		if (Object.keys(galat).length) {
 			return fail(400, {
@@ -105,6 +109,8 @@ export const actions: Actions = {
 
 		const galat: Record<string, string> = {};
 		if (!judul) galat.judul = 'Judul album wajib diisi.';
+		else if (judul.length > 150) galat.judul = 'Judul album maksimal 150 karakter.';
+		if (deskripsi.length > 400) galat.deskripsi = 'Deskripsi maksimal 400 karakter.';
 		if (tanggal && !tanggalValid(tanggal)) galat.tanggal = 'Tanggal tidak valid.';
 		if (Object.keys(galat).length) {
 			return fail(400, {
@@ -220,21 +226,34 @@ export const actions: Actions = {
 				nilai: null
 			} satisfies HasilGaleri);
 		}
+		if (caption.length > 150) {
+			return fail(400, {
+				sukses: false,
+				terhapus: false,
+				galat: { caption: 'Keterangan maksimal 150 karakter.' },
+				mode: 'foto',
+				albumId: album.id,
+				nilai: null
+			} satisfies HasilGaleri);
+		}
 
-		const tersimpan: string[] = [];
+		/** Baris photo yang sudah masuk DB (id + path file) untuk dibersihkan bila unggahan gagal di tengah jalan. */
+		const tersimpan: { id: number; path: string }[] = [];
 		try {
 			for (const file of files) {
 				const path = await simpanUnggahan(file, 'galeri', 'gambar');
-				tersimpan.push(path);
-				db.prepare('INSERT INTO photos (album_id, file, caption) VALUES (?, ?, ?)').run(
-					album.id,
-					path,
-					caption || null
-				);
+				const hasil = db
+					.prepare('INSERT INTO photos (album_id, file, caption) VALUES (?, ?, ?)')
+					.run(album.id, path, caption || null);
+				tersimpan.push({ id: Number(hasil.lastInsertRowid), path });
 			}
 		} catch (e) {
-			// Gagal di tengah jalan: bersihkan file yang sudah tersimpan agar tidak jadi sampah.
-			for (const p of tersimpan) hapusUnggahan(p);
+			// Gagal di tengah jalan (mis. satu file berformat salah): batalkan seluruh unggahan —
+			// hapus baris photo yang sudah masuk DB BESERTA file fisiknya agar tidak ada foto bocor/tanpa file.
+			for (const p of tersimpan) {
+				db.prepare('DELETE FROM photos WHERE id = ?').run(p.id);
+				hapusUnggahan(p.path);
+			}
 			if (e instanceof UploadError) {
 				return fail(400, {
 					sukses: false,

@@ -12,4 +12,9 @@
 	<p class="mt-1 text-sm text-stone-500">Terakhir diperbarui: {data.post.updated_at}</p>
 </div>
 
-<BeritaForm post={data.post} galat={form?.galat ?? null} action="?/simpan" />
+<BeritaForm
+	post={data.post}
+	galat={form?.galat ?? null}
+	nilai={form?.nilai ?? null}
+	action="?/simpan"
+/>

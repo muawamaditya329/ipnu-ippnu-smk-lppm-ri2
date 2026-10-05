@@ -3,9 +3,9 @@
 	import Logo from '#lib/components/Logo.svelte';
 </script>
 
-<div class="pattern-islamic-dark flex min-h-screen flex-col items-center justify-center bg-primary-50/60 px-4 text-center">
+<div class="flex min-h-screen flex-col items-center justify-center bg-white px-4 text-center">
 	<Logo size={52} teks={false} />
-	<p class="mt-6 font-display text-7xl font-extrabold text-primary-700">{page.status}</p>
+	<p class="mt-6 font-display text-7xl font-bold text-primary-900">{page.status}</p>
 	<h1 class="mt-2 font-display text-xl font-bold text-stone-800">
 		{page.status === 404 ? 'Halaman tidak ditemukan' : 'Terjadi kendala'}
 	</h1>

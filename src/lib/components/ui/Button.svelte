@@ -22,9 +22,7 @@
 		...rest
 	}: Props = $props();
 
-	const kelas = $derived(
-		`btn btn-${variant} ${size !== 'md' ? `btn-${size}` : ''} ${cls}`
-	);
+	const kelas = $derived(`btn btn-${variant} ${size !== 'md' ? `btn-${size}` : ''} ${cls}`);
 </script>
 
 {#if href}

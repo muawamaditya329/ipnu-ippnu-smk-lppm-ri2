@@ -1,20 +1,27 @@
 <script lang="ts">
 	type Props = {
-		eyebrow?: string;
+		/** Nomor urut section (01, 02, …) — dicetak emas di kiri judul. */
+		nomor?: string;
 		title: string;
 		desc?: string;
-		center?: boolean;
 	};
 
-	let { eyebrow = '', title, desc = '', center = false }: Props = $props();
+	let { nomor = '', title, desc = '' }: Props = $props();
 </script>
 
-<div class="{center ? 'mx-auto text-center' : ''} max-w-2xl">
-	{#if eyebrow}
-		<p class="mb-2 text-xs font-bold tracking-[0.2em] text-primary-700 uppercase">{eyebrow}</p>
-	{/if}
-	<h2 class="font-display text-3xl font-extrabold text-stone-900 sm:text-4xl">{title}</h2>
+<!-- Header section editorial: rata kiri, nomor emas + judul display + garis memanjang.
+	Tidak ada varian terpusat — label kecil di atas judul (eyebrow) dihapus dari sistem. -->
+<div>
+	<div class="flex items-center gap-4">
+		{#if nomor}<span class="rule-num shrink-0">{nomor}</span>{/if}
+		<h2
+			class="font-display text-2xl leading-tight font-bold tracking-tight text-stone-900 sm:text-[1.75rem]"
+		>
+			{title}
+		</h2>
+		<span class="h-px min-w-10 flex-1 bg-stone-300" aria-hidden="true"></span>
+	</div>
 	{#if desc}
-		<p class="mt-3 text-base leading-relaxed text-stone-500">{desc}</p>
+		<p class="mt-2.5 max-w-2xl text-sm leading-relaxed text-stone-600">{desc}</p>
 	{/if}
 </div>

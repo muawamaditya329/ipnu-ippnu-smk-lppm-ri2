@@ -13,22 +13,24 @@ export const load: PageServerLoad = async ({ url }) => {
 	const filter = jenis ? 'AND jenis = ?' : '';
 	const nilai = jenis ? [jenis] : [];
 
-	// Akan datang: masih berstatus terjadwal & tanggalnya hari ini atau setelahnya.
+	// Akan datang: masih terjadwal & belum usai — hari ini, setelahnya, atau kegiatan
+	// multi-hari yang masih berlangsung (tanggal_selesai-nya hari ini / setelahnya).
 	const akanDatang = db
 		.prepare(
-			`SELECT * FROM events WHERE status = 'terjadwal' AND tanggal >= ? ${filter}
+			`SELECT * FROM events WHERE status = 'terjadwal' AND COALESCE(tanggal_selesai, tanggal) >= ? ${filter}
 			 ORDER BY tanggal ASC, jam ASC`
 		)
 		.all(hari, ...nilai) as EventItem[];
 
-	// Telah berlalu: tanggal sudah lewat, atau hari ini tetapi sudah selesai/dibatalkan.
-	// Bisa dari status apa pun — batasi 5 terakhir.
+	// Telah berlalu: kebalikan dari akan datang supaya tidak ada agenda yang hilang
+	// dari kedua daftar — sudah selesai/dibatalkan, atau waktunya (tanggal terakhir)
+	// sudah lewat. Bisa dari status apa pun — batasi 5 terakhir.
 	const telahBerlalu = db
 		.prepare(
-			`SELECT * FROM events WHERE (tanggal < ? OR (tanggal = ? AND status != 'terjadwal')) ${filter}
+			`SELECT * FROM events WHERE (status != 'terjadwal' OR COALESCE(tanggal_selesai, tanggal) < ?) ${filter}
 			 ORDER BY tanggal DESC, jam DESC LIMIT 5`
 		)
-		.all(hari, hari, ...nilai) as EventItem[];
+		.all(hari, ...nilai) as EventItem[];
 
 	return { jenis, akanDatang, telahBerlalu };
 };

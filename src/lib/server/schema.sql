@@ -19,6 +19,8 @@ CREATE TABLE IF NOT EXISTS sessions (
 	expires_at TEXT NOT NULL,
 	created_at TEXT NOT NULL DEFAULT (datetime('now'))
 );
+CREATE INDEX IF NOT EXISTS idx_sessions_user ON sessions (user_id);
+CREATE INDEX IF NOT EXISTS idx_sessions_expires ON sessions (expires_at);
 
 -- Calon & anggota. jenis_kelamin 'L' = IPNU, 'P' = IPPNU.
 CREATE TABLE IF NOT EXISTS members (
@@ -39,10 +41,30 @@ CREATE TABLE IF NOT EXISTS members (
 	catatan TEXT,
 	created_at TEXT NOT NULL DEFAULT (datetime('now')),
 	approved_at TEXT,
-	approved_by INTEGER REFERENCES users(id)
+	approved_by INTEGER REFERENCES users(id),
+	-- Token acak (16 hex) yang menuntut keberadaan no_reg pada tautan kartu anggota.
+	-- no_reg berpola mudah ditebak (IPN/2025/0001), jadi /kartu hanya tampil bila
+	-- tautannya menyertakan token ini. DB lama memperoleh kolom ini lewat ALTER TABLE
+	-- otomatis di src/lib/server/db.ts (beserta pengisian token untuk baris lama).
+	token_kartu TEXT,
+	-- Hash password login anggota (format sama dgn users.password_hash). Boleh NULL:
+	-- anggota belum tentu punya akses login sampai pengurus menyiapkannya.
+	-- DB lama memperoleh kolom ini lewat ALTER TABLE otomatis di db.ts.
+	password_hash TEXT
 );
 CREATE INDEX IF NOT EXISTS idx_members_status ON members (status);
 CREATE INDEX IF NOT EXISTS idx_members_kelamin ON members (jenis_kelamin);
+
+-- Sesi login anggota (terpisah dari sessions pengurus agar kebijakan
+-- masa berlaku & pembersihannya tidak saling tergantung).
+CREATE TABLE IF NOT EXISTS anggota_sessions (
+	token TEXT PRIMARY KEY,
+	member_id INTEGER NOT NULL REFERENCES members(id) ON DELETE CASCADE,
+	expires_at TEXT NOT NULL,
+	created_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
+CREATE INDEX IF NOT EXISTS idx_anggota_sessions_member ON anggota_sessions (member_id);
+CREATE INDEX IF NOT EXISTS idx_anggota_sessions_expires ON anggota_sessions (expires_at);
 
 -- Berita / artikel / pengumuman.
 CREATE TABLE IF NOT EXISTS posts (

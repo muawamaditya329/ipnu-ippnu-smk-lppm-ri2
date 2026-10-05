@@ -45,7 +45,7 @@ export const load: PageServerLoad = async () => {
 	const agenda = db
 		.prepare(
 			`SELECT id, judul, lokasi, tanggal, jam FROM events
-			 WHERE status = 'terjadwal' AND tanggal >= ?
+			 WHERE status = 'terjadwal' AND COALESCE(tanggal_selesai, tanggal) >= ?
 			 ORDER BY tanggal ASC, jam ASC LIMIT 4`
 		)
 		.all(hariIni()) as AgendaTerdekat[];

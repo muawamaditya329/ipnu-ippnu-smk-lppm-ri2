@@ -17,18 +17,21 @@ export const load: PageServerLoad = async () => {
 	const hitung = (sql: string, ...nilai: unknown[]): number =>
 		(db.prepare(sql).get(...nilai) as { n: number }).n;
 
-	// 3 berita terbit terbaru (terbaru dari tanggal terbit, fallback tanggal dibuat).
+	// 4 berita terbit terbaru (terbaru dari tanggal terbit, fallback tanggal dibuat):
+	// 1 jadi berita unggulan beranda, sisanya masuk daftar pendamping.
 	const beritaTerbaru = db
 		.prepare(
 			`SELECT * FROM posts WHERE status = 'terbit'
-			 ORDER BY COALESCE(published_at, created_at) DESC LIMIT 3`
+			 ORDER BY COALESCE(published_at, created_at) DESC LIMIT 4`
 		)
 		.all() as Post[];
 
-	// 4 agenda terdekat: masih terjadwal & tanggalnya hari ini / setelahnya.
+	// 4 agenda terdekat: masih terjadwal & belum usai — sama dengan definisi
+	// "Akan Datang" di halaman agenda, supaya kegiatan multi-hari yang tanggal
+	// mulainya sudah lewat tapi masih berlangsung tetap ikut tampil.
 	const agendaMendatang = db
 		.prepare(
-			`SELECT * FROM events WHERE status = 'terjadwal' AND tanggal >= ?
+			`SELECT * FROM events WHERE status = 'terjadwal' AND COALESCE(tanggal_selesai, tanggal) >= ?
 			 ORDER BY tanggal ASC, jam ASC LIMIT 4`
 		)
 		.all(hari) as EventItem[];
@@ -46,12 +49,12 @@ export const load: PageServerLoad = async () => {
 		berita: hitung(`SELECT COUNT(*) AS n FROM posts WHERE status = 'terbit'`)
 	};
 
-	// 6 foto terbaru sebagai teaser galeri (lengkap dengan nama albumnya).
+	// 5 foto terbaru sebagai strip galeri beranda — 1 besar + 4 pendamping.
 	const fotoGaleri = db
 		.prepare(
 			`SELECT p.id, p.file, p.caption, a.id AS album_id, a.judul AS album_judul
 			 FROM photos p JOIN albums a ON a.id = p.album_id
-			 ORDER BY p.created_at DESC, p.id DESC LIMIT 6`
+			 ORDER BY p.created_at DESC, p.id DESC LIMIT 5`
 		)
 		.all() as FotoGaleri[];
 

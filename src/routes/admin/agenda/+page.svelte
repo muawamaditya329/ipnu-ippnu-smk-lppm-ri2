@@ -4,6 +4,7 @@
 	import Modal from '#lib/components/ui/Modal.svelte';
 	import type { EventItem } from '#lib/server/db.ts';
 	import { fmtTanggalPendek, hariIni, LABEL_CAKUPAN, LABEL_JENIS_AGENDA } from '#lib/utils.ts';
+	import { kirimJikaSetuju } from '#lib/konfirmasi.svelte.ts';
 	import type { PageProps } from './$types';
 
 	let { data, form }: PageProps = $props();
@@ -107,6 +108,13 @@
 		class="mb-5 rounded-xl border border-primary-200 bg-primary-50 px-4 py-3 text-sm font-medium text-primary-800"
 	>
 		{form.pesan ?? 'Perubahan berhasil disimpan.'}
+	</div>
+{:else if form?.galat?.umum && !buka}
+	<!-- Galat yang tidak bisa tampil di dalam modal (mis. hapus gagal) -->
+	<div
+		class="mb-5 rounded-xl border border-accent-200 bg-accent-50 px-4 py-3 text-sm font-medium text-accent-700"
+	>
+		{form.galat.umum}
 	</div>
 {/if}
 
@@ -216,9 +224,12 @@
 								<form
 									method="POST"
 									action="?/hapus&id={item.id}"
-									onsubmit={(e) => {
-										if (!confirm(`Hapus agenda "${item.judul}"?`)) e.preventDefault();
-									}}
+									onsubmit={(e) =>
+										kirimJikaSetuju(e, {
+											judul: 'Hapus Agenda',
+											pesan: `Hapus agenda "${item.judul}"?`,
+											tombol: 'Hapus'
+										})}
 								>
 									<button class="btn btn-danger btn-sm" aria-label="Hapus {item.judul}"
 										><Trash2 class="h-3.5 w-3.5" /></button
@@ -266,16 +277,28 @@
 		<div class="grid gap-4 sm:grid-cols-2">
 			<div>
 				<label class="label" for="a-jenis">Jenis</label>
-				<select id="a-jenis" name="jenis" class="input" bind:value={nilai.jenis}>
+				<select
+					id="a-jenis"
+					name="jenis"
+					class="input {galat?.jenis ? 'input-error' : ''}"
+					bind:value={nilai.jenis}
+				>
 					{#each OPSI_JENIS as [v, l] (v)}<option value={v}>{l}</option>{/each}
 				</select>
+				{#if galat?.jenis}<p class="error-text">{galat.jenis}</p>{/if}
 			</div>
 			<div>
 				<label class="label" for="a-cakupan">Cakupan</label>
-				<select id="a-cakupan" name="cakupan" class="input" bind:value={nilai.cakupan}>
+				<select
+					id="a-cakupan"
+					name="cakupan"
+					class="input {galat?.cakupan ? 'input-error' : ''}"
+					bind:value={nilai.cakupan}
+				>
 					{#each OPSI_CAKUPAN as [v, l] (v)}<option value={v}>{l}</option>{/each}
 				</select>
 				<p class="hint">IPNU = kegiatan putra, IPPNU = kegiatan putri.</p>
+				{#if galat?.cakupan}<p class="error-text">{galat.cakupan}</p>{/if}
 			</div>
 		</div>
 
@@ -314,15 +337,22 @@
 					type="date"
 					class="input {galat?.tanggal_selesai ? 'input-error' : ''}"
 					bind:value={nilai.tanggal_selesai}
+					min={nilai.tanggal}
 				/>
 				<p class="hint">Opsional — isi bila kegiatan berlangsung lebih dari satu hari.</p>
 				{#if galat?.tanggal_selesai}<p class="error-text">{galat.tanggal_selesai}</p>{/if}
 			</div>
 			<div>
 				<label class="label" for="a-status">Status</label>
-				<select id="a-status" name="status" class="input" bind:value={nilai.status}>
+				<select
+					id="a-status"
+					name="status"
+					class="input {galat?.status ? 'input-error' : ''}"
+					bind:value={nilai.status}
+				>
 					{#each OPSI_STATUS as [v, l] (v)}<option value={v}>{l}</option>{/each}
 				</select>
+				{#if galat?.status}<p class="error-text">{galat.status}</p>{/if}
 			</div>
 		</div>
 
@@ -332,11 +362,12 @@
 				id="a-lokasi"
 				name="lokasi"
 				type="text"
-				class="input"
+				class="input {galat?.lokasi ? 'input-error' : ''}"
 				bind:value={nilai.lokasi}
 				maxlength="160"
 				placeholder="mis. Aula SMK LPPM RI 2 Kedungreja"
 			/>
+			{#if galat?.lokasi}<p class="error-text">{galat.lokasi}</p>{/if}
 		</div>
 
 		<div>

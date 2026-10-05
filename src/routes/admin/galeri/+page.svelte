@@ -4,6 +4,7 @@
 	import Modal from '#lib/components/ui/Modal.svelte';
 	import { fmtTanggalPendek } from '#lib/utils.ts';
 	import type { Album } from '#lib/server/db.ts';
+	import { kirimJikaSetuju } from '#lib/konfirmasi.svelte.ts';
 	import type { PageProps } from './$types';
 
 	let { data, form }: PageProps = $props();
@@ -163,10 +164,12 @@
 						<form
 							method="POST"
 							action="?/hapus&id={album.id}"
-							onsubmit={(e) => {
-								if (!confirm(`Hapus album "${album.judul}" beserta ${album.jumlah_foto} fotonya?`))
-									e.preventDefault();
-							}}
+							onsubmit={(e) =>
+								kirimJikaSetuju(e, {
+									judul: 'Hapus Album',
+									pesan: `Album "${album.judul}" beserta ${album.jumlah_foto} foto di dalamnya akan dihapus permanen.`,
+									tombol: 'Hapus'
+								})}
 						>
 							<button class="btn btn-danger btn-sm" aria-label="Hapus album {album.judul}"
 								><Trash2 class="h-3.5 w-3.5" /></button
@@ -216,9 +219,10 @@
 				name="deskripsi"
 				rows="3"
 				maxlength="400"
-				class="input"
+				class="input {galat?.deskripsi ? 'input-error' : ''}"
 				placeholder="Ceritakan singkat kegiatan yang didokumentasikan…"
 				bind:value={deskripsiForm}></textarea>
+			{#if galat?.deskripsi}<p class="error-text">{galat.deskripsi}</p>{/if}
 		</div>
 
 		<div>
@@ -280,9 +284,12 @@
 							method="POST"
 							action="?/hapusFoto&fotoId={f.id}&albumId={albumFoto.id}"
 							class="absolute top-2 right-2"
-							onsubmit={(e) => {
-								if (!confirm('Hapus foto ini dari album?')) e.preventDefault();
-							}}
+							onsubmit={(e) =>
+								kirimJikaSetuju(e, {
+									judul: 'Hapus Foto',
+									pesan: 'Hapus foto ini dari album?',
+									tombol: 'Hapus'
+								})}
 						>
 							<button
 								class="rounded-lg bg-stone-950/60 p-1.5 text-white backdrop-blur transition hover:bg-accent-700"
@@ -334,10 +341,11 @@
 				<input
 					id="f-caption"
 					name="caption"
-					class="input"
+					class="input {galat?.caption ? 'input-error' : ''}"
 					maxlength="150"
 					placeholder="Berlaku untuk semua foto dalam unggahan ini"
 				/>
+				{#if galat?.caption}<p class="error-text">{galat.caption}</p>{/if}
 			</div>
 			<div class="flex items-center justify-end gap-2">
 				<button type="button" class="btn btn-ghost" onclick={() => (bukaFoto = false)}>Tutup</button

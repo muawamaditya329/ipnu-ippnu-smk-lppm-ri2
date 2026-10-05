@@ -10,6 +10,7 @@
 		KATEGORI_KAS_KELUAR,
 		KATEGORI_KAS_MASUK
 	} from '#lib/utils.ts';
+	import { kirimJikaSetuju } from '#lib/konfirmasi.svelte.ts';
 	import type { PageProps } from './$types';
 
 	let { data, form }: PageProps = $props();
@@ -23,6 +24,18 @@
 		timeZone: 'UTC'
 	});
 	const namaBulanIni = fmtBulan.format(new Date(`${hariIni().slice(0, 7)}-01T00:00:00Z`));
+
+	// Saat filter aktif, kartu ringkasan menunjuk set yang sama dengan daftar
+	// di bawahnya sehingga saldo = masuk − keluar tetap konsisten.
+	const adaFilter = $derived(Boolean(data.bulan || data.jenis));
+	const namaBulanFilter = $derived(
+		data.bulan ? fmtBulan.format(new Date(`${data.bulan}-01T00:00:00Z`)) : ''
+	);
+	const labelFilter = $derived(
+		[namaBulanFilter, data.jenis === 'masuk' ? 'Masuk' : data.jenis === 'keluar' ? 'Keluar' : '']
+			.filter(Boolean)
+			.join(' • ')
+	);
 
 	// --- Modal catat transaksi ---
 	let bukaModal = $state(false);
@@ -56,16 +69,22 @@
 	}
 
 	// Sinkron hasil aksi server: sukses → tutup modal; gagal validasi → buka ulang & isi kembali.
+	// Modal hanya dibuka bila kegagalan berasal dari form catat transaksi (action buat
+	// selalu mengirim `nilai`); kegagalan aksi lain (mis. hapus ditolak admin) tampil
+	// sebagai banner di halaman, bukan modal kosong.
 	$effect(() => {
 		if (form) memproses = false;
 		if (form?.sukses) {
 			bukaModal = false;
-		} else if (form?.galat) {
+		} else if (form?.galat && form.nilai) {
 			const n = form.nilai;
 			if (n) {
 				jenisForm = n.jenis === 'keluar' ? 'keluar' : 'masuk';
 				jumlahForm = n.jumlah;
-				kategoriForm = n.kategori;
+				// Kategori dikembalikan hanya bila masih sah utk jenis terpilih;
+				// kalau tidak, pakai opsi pertama daftar jenis itu.
+				const daftar = jenisForm === 'masuk' ? KATEGORI_KAS_MASUK : KATEGORI_KAS_KELUAR;
+				kategoriForm = daftar.includes(n.kategori) ? n.kategori : (daftar[0] ?? '');
 				keteranganForm = n.keterangan;
 				tanggalForm = n.tanggal;
 			}
@@ -81,6 +100,11 @@
 		<h1 class="font-display text-2xl font-extrabold text-stone-900">Kas & Iuran</h1>
 		<p class="mt-1 text-sm text-stone-500">
 			Catatan pemasukan & pengeluaran kas komisariat, termasuk iuran anggota.
+			{#if data.user.role !== 'admin'}
+				<span class="block text-xs">
+					Anda dapat mencatat transaksi; penghapusan catatan kas hanya dapat dilakukan admin.
+				</span>
+			{/if}
 		</p>
 	</div>
 	<button class="btn btn-primary" onclick={bukaFormBaru}
@@ -89,27 +113,51 @@
 </div>
 
 <div class="mb-6 grid gap-4 sm:grid-cols-3">
-	<StatCard
-		label="Saldo Kas"
-		value={fmtRp(data.totalMasuk - data.totalKeluar)}
-		icon={Wallet}
-		tone="green"
-		hint="Total masuk dikurangi total keluar"
-	/>
-	<StatCard
-		label="Masuk Bulan Ini"
-		value={fmtRp(data.masukBulanIni)}
-		icon={TrendingUp}
-		tone="blue"
-		hint={namaBulanIni}
-	/>
-	<StatCard
-		label="Keluar Bulan Ini"
-		value={fmtRp(data.keluarBulanIni)}
-		icon={TrendingDown}
-		tone="red"
-		hint={namaBulanIni}
-	/>
+	{#if adaFilter}
+		<StatCard
+			label="Saldo Terpilih"
+			value={fmtRp(data.masukTerpilih - data.keluarTerpilih)}
+			icon={Wallet}
+			tone="amber"
+			hint="Saldo keseluruhan: {fmtRp(data.totalMasuk - data.totalKeluar)}"
+		/>
+		<StatCard
+			label="Masuk Terpilih"
+			value={fmtRp(data.masukTerpilih)}
+			icon={TrendingUp}
+			tone="green"
+			hint={labelFilter}
+		/>
+		<StatCard
+			label="Keluar Terpilih"
+			value={fmtRp(data.keluarTerpilih)}
+			icon={TrendingDown}
+			tone="red"
+			hint={labelFilter}
+		/>
+	{:else}
+		<StatCard
+			label="Saldo Kas"
+			value={fmtRp(data.totalMasuk - data.totalKeluar)}
+			icon={Wallet}
+			tone="amber"
+			hint="Total masuk dikurangi total keluar"
+		/>
+		<StatCard
+			label="Masuk Bulan Ini"
+			value={fmtRp(data.masukBulanIni)}
+			icon={TrendingUp}
+			tone="green"
+			hint={namaBulanIni}
+		/>
+		<StatCard
+			label="Keluar Bulan Ini"
+			value={fmtRp(data.keluarBulanIni)}
+			icon={TrendingDown}
+			tone="red"
+			hint={namaBulanIni}
+		/>
+	{/if}
 </div>
 
 {#if form?.sukses}
@@ -117,6 +165,15 @@
 		class="mb-5 rounded-xl border border-primary-200 bg-primary-50 px-4 py-3 text-sm font-medium text-primary-800"
 	>
 		{form.terhapus ? 'Transaksi berhasil dihapus.' : 'Transaksi berhasil dicatat.'}
+	</div>
+{/if}
+
+{#if form?.galat?.umum && !form?.nilai}
+	<div
+		class="mb-5 rounded-xl border border-accent-200 bg-accent-50 px-4 py-3 text-sm font-medium text-accent-700"
+		role="alert"
+	>
+		{form.galat.umum}
 	</div>
 {/if}
 
@@ -189,18 +246,26 @@
 						<td class="td text-xs">{t.dicatat_oleh_nama ?? '—'}</td>
 						<td class="td">
 							<div class="flex justify-end">
-								<form
-									method="POST"
-									action="?/hapus&id={t.id}"
-									onsubmit={(e) => {
-										if (!confirm(`Hapus transaksi "${t.keterangan}" (${fmtRp(t.jumlah)})?`))
-											e.preventDefault();
-									}}
-								>
-									<button class="btn btn-danger btn-sm" aria-label="Hapus transaksi {t.keterangan}"
-										><Trash2 class="h-3.5 w-3.5" /> Hapus</button
+								{#if data.user.role === 'admin'}
+									<form
+										method="POST"
+										action="?/hapus&id={t.id}"
+										onsubmit={(e) =>
+											kirimJikaSetuju(e, {
+												judul: 'Hapus Transaksi',
+												pesan: `Hapus transaksi "${t.keterangan}" (${fmtRp(t.jumlah)})? Saldo akan dihitung ulang.`,
+												tombol: 'Hapus'
+											})}
 									>
-								</form>
+										<button
+											class="btn btn-danger btn-sm"
+											aria-label="Hapus transaksi {t.keterangan}"
+											><Trash2 class="h-3.5 w-3.5" /> Hapus</button
+										>
+									</form>
+								{:else}
+									<span class="text-xs text-stone-400">Hanya admin</span>
+								{/if}
 							</div>
 						</td>
 					</tr>
@@ -266,8 +331,8 @@
 				id="jumlah"
 				name="jumlah"
 				type="number"
-				min="1000"
-				step="1000"
+				min="1"
+				step="1"
 				placeholder="mis. 25000"
 				required
 				bind:value={jumlahForm}

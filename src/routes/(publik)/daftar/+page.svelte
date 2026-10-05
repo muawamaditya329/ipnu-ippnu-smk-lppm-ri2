@@ -1,12 +1,20 @@
 <script lang="ts">
-	import { CheckCircle2, ShieldCheck, UserRound, UsersRound } from '@lucide/svelte';
+	import PageHeader from '#lib/components/layout/PageHeader.svelte';
 	import { hariIni, JURUSAN_SMK, TINGKAT_KELAS } from '#lib/utils.ts';
 	import type { PageProps } from './$types';
 
 	let { form }: PageProps = $props();
 
 	const galat = $derived(form?.galat ?? null);
-	const nilai = $derived(
+
+	// Isian formulir disimpan sebagai state lokal yang di-bind:value — BUKAN
+	// value={nilai.x} dari hasil server. Dgn atribut value={expr}, setiap
+	// pembaruan state saat submit (tombol "Mengirim…") menimpa ulang ketikan
+	// pengguna dgn nilai lama sehingga kolom terkirim kosong (pola sama yg
+	// didokumentasikan di halaman Masuk). Password sengaja tidak punya state:
+	// tidak pernah dikirim balik server saat galat.
+	// svelte-ignore state_referenced_locally
+	let nilai = $state(
 		form?.nilai ?? {
 			nama: '',
 			jenis_kelamin: '',
@@ -39,103 +47,117 @@
 	/>
 </svelte:head>
 
+<PageHeader
+	kicker="Pendaftaran Anggota"
+	title="Formulir Pendaftaran Anggota"
+	desc="Dibuka untuk seluruh pelajar SMK LPPM RI 2 Kedungreja — putra mendaftar ke IPNU, putri ke IPPNU. Tanpa biaya apa pun; verifikasi dilakukan pengurus."
+/>
+
 <section class="mx-auto max-w-6xl px-4 py-10 sm:px-6">
-	<div class="grid gap-8 lg:grid-cols-5">
-		<!-- Panel informasi -->
-		<aside class="lg:col-span-2">
-			<div class="pattern-islamic rounded-2xl bg-primary-900 p-7 text-white sm:p-8">
-				<p class="text-xs font-bold tracking-widest text-primary-200 uppercase">
-					Pendaftaran Anggota
-				</p>
-				<h1 class="mt-2 font-display text-2xl font-extrabold">Bergabung Bersama Kami</h1>
-				<p class="mt-3 text-sm leading-relaxed text-primary-100">
-					Isi formulir di samping untuk mendaftar sebagai anggota komisariat. Verifikasi dilakukan
-					oleh pengurus, tanpa biaya apa pun.
-				</p>
+	<div class="grid gap-10 lg:grid-cols-12">
+		<!-- Panel syarat: catatan kaki bernomor, bukan panel hijau -->
+		<aside class="lg:col-span-4">
+			<p class="kicker">Syarat Pendaftaran</p>
+			<ol class="mt-3 divide-y divide-stone-200 border-y border-stone-200">
+				{#each syarat as s, i (s)}
+					<li class="flex items-start gap-3 py-3.5 text-sm leading-relaxed text-stone-700">
+						<span class="rule-num shrink-0 pt-0.5">{String(i + 1).padStart(2, '0')}</span>
+						<span>{s}</span>
+					</li>
+				{/each}
+			</ol>
 
-				<h2 class="mt-7 font-display text-sm font-bold tracking-wide text-primary-200 uppercase">
-					Syarat Pendaftaran
-				</h2>
-				<ul class="mt-3 space-y-3">
-					{#each syarat as s (s)}
-						<li class="flex items-start gap-2.5 text-sm text-primary-50">
-							<CheckCircle2 class="mt-0.5 h-4 w-4 shrink-0 text-gold-400" />
-							<span>{s}</span>
-						</li>
-					{/each}
-				</ul>
-
-				<h2 class="mt-7 font-display text-sm font-bold tracking-wide text-primary-200 uppercase">
-					Pilihan Organisasi
-				</h2>
-				<div class="mt-3 space-y-3">
-					<div class="flex items-start gap-3 rounded-xl bg-white/10 p-3.5">
-						<div
-							class="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-primary-700 text-white"
-						>
-							<UserRound class="h-5 w-5" />
-						</div>
-						<div>
-							<p class="text-sm font-bold">Putra → IPNU</p>
-							<p class="text-xs text-primary-100">Ikatan Pelajar Nahdlatul Ulama</p>
-						</div>
-					</div>
-					<div class="flex items-start gap-3 rounded-xl bg-white/10 p-3.5">
-						<div
-							class="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-accent-600 text-white"
-						>
-							<UsersRound class="h-5 w-5" />
-						</div>
-						<div>
-							<p class="text-sm font-bold">Putri → IPPNU</p>
-							<p class="text-xs text-primary-100">Ikatan Pelajar Putri Nahdlatul Ulama</p>
-						</div>
-					</div>
+			<p class="kicker mt-9">Pilihan Organisasi</p>
+			<div class="mt-3 space-y-2.5">
+				<div class="aksen-ipnu border border-stone-200 bg-white px-4 py-3">
+					<p class="font-display text-base font-bold text-stone-900">Putra &mdash; IPNU</p>
+					<p class="mt-0.5 text-xs text-stone-500">Ikatan Pelajar Nahdlatul Ulama</p>
 				</div>
-
-				<p
-					class="mt-7 flex items-start gap-2 border-t border-white/15 pt-5 text-xs text-primary-100"
-				>
-					<ShieldCheck class="mt-0.5 h-4 w-4 shrink-0 text-gold-400" />
-					Data kamu hanya digunakan untuk keperluan keanggotaan dan disimpan secara aman.
-				</p>
+				<div class="aksen-ippnu border border-stone-200 bg-white px-4 py-3">
+					<p class="font-display text-base font-bold text-stone-900">Putri &mdash; IPPNU</p>
+					<p class="mt-0.5 text-xs text-stone-500">Ikatan Pelajar Putri Nahdlatul Ulama</p>
+				</div>
 			</div>
+
+			<p class="mt-9 border-l-2 border-stone-300 pl-3 text-xs leading-relaxed text-stone-500">
+				Data yang kamu isikan hanya digunakan untuk keperluan keanggotaan komisariat dan disimpan
+				secara aman. Pembinaan dipisah antara putra dan putri.
+			</p>
 		</aside>
 
 		<!-- Formulir -->
-		<div class="lg:col-span-3">
+		<div class="lg:col-span-8">
 			<div class="card p-6 sm:p-8">
 				{#if form?.sukses}
-					<div class="py-4 text-center">
-						<div
-							class="mx-auto mb-5 flex h-16 w-16 items-center justify-center rounded-full bg-primary-100 text-primary-700"
-						>
-							<CheckCircle2 class="h-9 w-9" />
-						</div>
-						<h2 class="font-display text-2xl font-extrabold text-stone-900">
-							Pendaftaran Terkirim!
-						</h2>
-						<p class="mx-auto mt-3 max-w-md text-sm leading-relaxed text-stone-600">
-							Terima kasih, <b class="text-stone-900">{form.nama}</b>. Data pendaftaranmu sudah kami
-							terima dan akan diverifikasi pengurus paling lama 3 hari kerja.
+					<p class="kicker">Pendaftaran Terkirim</p>
+					<h2 class="mt-2 font-display text-2xl font-bold tracking-tight text-stone-900 sm:text-3xl">
+						Terima kasih, {form.nama}.
+					</h2>
+					<p class="mt-2 max-w-xl text-sm leading-relaxed text-stone-600">
+						Data pendaftaranmu sudah kami terima dengan status
+						<b class="text-stone-900">menunggu verifikasi</b>.
+					</p>
+
+					<!-- Lembar NIS: gaya arsip bergaris emas -->
+					<div class="aksen-kas card mt-6 max-w-xl p-5">
+						<p class="text-[11px] font-bold tracking-[0.08em] text-stone-400 uppercase">
+							Nomor Induk Siswa (NIS) kamu
 						</p>
-						<div
-							class="mx-auto mt-5 max-w-md rounded-xl border border-primary-200 bg-primary-50 px-4 py-3 text-sm text-primary-900"
+						<p class="mt-1 font-mono text-2xl font-bold tracking-wide text-stone-900">
+							{form.nis}
+						</p>
+						<p class="mt-2 text-xs leading-relaxed text-stone-500">
+							Catat dan simpan angka ini — dibutuhkan untuk mengecek status pendaftaran dan menjadi
+							nama akunmu saat masuk sebagai anggota. Jangan lupakan juga password yang barusan kamu
+							buat.
+						</p>
+					</div>
+
+					<p class="kicker mt-8">Langkah Selanjutnya</p>
+					<ol class="mt-2 divide-y divide-stone-200 border-y border-stone-200">
+						<li class="flex items-start gap-3 py-3.5 text-sm leading-relaxed text-stone-700">
+							<span class="rule-num shrink-0 pt-0.5">01</span>
+							<span>Pengurus memverifikasi pendaftaranmu, paling lama 3 hari kerja.</span>
+						</li>
+						<li class="flex items-start gap-3 py-3.5 text-sm leading-relaxed text-stone-700">
+							<span class="rule-num shrink-0 pt-0.5">02</span>
+							<span>
+								Pantau status lewat halaman <b>Cek Status</b> menggunakan NIS
+								<b class="font-mono">{form.nis}</b>.
+							</span>
+						</li>
+						<li class="flex items-start gap-3 py-3.5 text-sm leading-relaxed text-stone-700">
+							<span class="rule-num shrink-0 pt-0.5">03</span>
+							<span>
+								Bila disetujui, masuk sebagai anggota dengan <b>NIS</b> dan <b>password</b> yang kamu
+								buat tadi — lewat tab <b>Anggota</b> di halaman <b>Masuk</b>. Kartu anggota digitalmu
+								bisa dilihat dan dicetak dari dalam maupun halaman cek status.
+							</span>
+						</li>
+					</ol>
+
+					<div class="mt-6 flex flex-wrap gap-3">
+						<a
+							href="/daftar/status?nis={encodeURIComponent(form.nis)}"
+							class="btn btn-primary btn-lg"
 						>
-							Catat NIS-mu: <b class="font-mono text-base">{form.nis}</b> — dibutuhkan untuk mengecek
-							status pendaftaran.
-						</div>
-						<div class="mt-6">
-							<a
-								href="/daftar/status?nis={encodeURIComponent(form.nis)}"
-								class="btn btn-primary btn-lg"
-							>
-								Cek Status Pendaftaran
-							</a>
-						</div>
+							Cek Status Pendaftaran
+						</a>
+						<a href="/masuk?tab=anggota" class="btn btn-outline btn-lg">Halaman Masuk</a>
 					</div>
 				{:else}
-					<h2 class="font-display text-xl font-extrabold text-stone-900">Formulir Pendaftaran</h2>
+					{#if form?.pesan}
+						<div
+							class="mb-5 border-l-2 border-gold-500 border-y border-r border-y-stone-200 border-r-stone-200 bg-white px-4 py-3 text-sm font-medium text-stone-700"
+							role="alert"
+						>
+							{form.pesan}
+						</div>
+					{/if}
+
+					<h2 class="font-display text-xl font-bold tracking-tight text-stone-900">
+						Formulir Pendaftaran
+					</h2>
 					<p class="mt-1 text-sm text-stone-500">
 						Kolom bertanda <span class="text-accent-600">*</span> wajib diisi.
 					</p>
@@ -158,7 +180,7 @@
 								minlength="3"
 								maxlength="100"
 								placeholder="mis. Ahmad Fauzi"
-								value={nilai.nama}
+								bind:value={nilai.nama}
 							/>
 							{#if galat?.nama}<p class="error-text">{galat.nama}</p>{/if}
 						</div>
@@ -169,17 +191,17 @@
 							>
 							<div class="grid gap-3 sm:grid-cols-2">
 								<label
-									class="flex cursor-pointer items-start gap-3 rounded-xl border p-3.5 transition {nilai.jenis_kelamin ===
-									'L'
-										? 'border-primary-600 bg-primary-50'
-										: 'border-stone-200 hover:border-primary-300'}"
+									class="flex cursor-pointer items-start gap-3 border bg-white p-3.5 transition {nilai
+										.jenis_kelamin === 'L'
+										? 'aksen-ipnu border-primary-800'
+										: 'border-stone-200 hover:border-stone-400'}"
 								>
 									<input
 										type="radio"
 										name="jenis_kelamin"
 										value="L"
 										class="mt-1 accent-primary-700"
-										checked={nilai.jenis_kelamin === 'L'}
+										bind:group={nilai.jenis_kelamin}
 										required
 									/>
 									<span>
@@ -188,17 +210,17 @@
 									</span>
 								</label>
 								<label
-									class="flex cursor-pointer items-start gap-3 rounded-xl border p-3.5 transition {nilai.jenis_kelamin ===
-									'P'
-										? 'border-accent-600 bg-accent-50'
-										: 'border-stone-200 hover:border-accent-300'}"
+									class="flex cursor-pointer items-start gap-3 border bg-white p-3.5 transition {nilai
+										.jenis_kelamin === 'P'
+										? 'aksen-ippnu border-accent-700'
+										: 'border-stone-200 hover:border-stone-400'}"
 								>
 									<input
 										type="radio"
 										name="jenis_kelamin"
 										value="P"
 										class="mt-1 accent-accent-700"
-										checked={nilai.jenis_kelamin === 'P'}
+										bind:group={nilai.jenis_kelamin}
 										required
 									/>
 									<span>
@@ -225,7 +247,7 @@
 									inputmode="numeric"
 									pattern="[0-9]+"
 									placeholder="mis. 2025001"
-									value={nilai.nis}
+									bind:value={nilai.nis}
 								/>
 								{#if galat?.nis}<p class="error-text">{galat.nis}</p>{/if}
 							</div>
@@ -239,8 +261,9 @@
 									type="date"
 									class="input {galat?.tanggal_lahir ? 'input-error' : ''}"
 									required
+									min="1990-01-01"
 									max={hariIni()}
-									value={nilai.tanggal_lahir}
+									bind:value={nilai.tanggal_lahir}
 								/>
 								{#if galat?.tanggal_lahir}<p class="error-text">{galat.tanggal_lahir}</p>{/if}
 							</div>
@@ -256,9 +279,10 @@
 									name="kelas"
 									class="input {galat?.kelas ? 'input-error' : ''}"
 									required
+									bind:value={nilai.kelas}
 								>
 									{#each TINGKAT_KELAS as k (k)}
-										<option value={k} selected={nilai.kelas === k}>{k}</option>
+										<option value={k}>{k}</option>
 									{/each}
 								</select>
 								{#if galat?.kelas}<p class="error-text">{galat.kelas}</p>{/if}
@@ -272,13 +296,63 @@
 									name="jurusan"
 									class="input {galat?.jurusan ? 'input-error' : ''}"
 									required
+									bind:value={nilai.jurusan}
 								>
 									{#each JURUSAN_SMK as j (j)}
-										<option value={j} selected={nilai.jurusan === j}>{j}</option>
+										<option value={j}>{j}</option>
 									{/each}
 								</select>
 								{#if galat?.jurusan}<p class="error-text">{galat.jurusan}</p>{/if}
 							</div>
+						</div>
+
+						<!-- Akun masuk anggota: dipakai setelah pendaftaran disetujui pengurus -->
+						<div class="border border-stone-200 bg-stone-50 p-4">
+							<p class="text-[11px] font-bold tracking-[0.08em] text-stone-500 uppercase">
+								Akun Masuk Anggota
+							</p>
+							<div class="mt-3 grid gap-5 sm:grid-cols-2">
+								<div>
+									<label class="label" for="password"
+										>Password <span class="text-accent-600">*</span></label
+									>
+									<input
+										id="password"
+										name="password"
+										type="password"
+										class="input {galat?.password ? 'input-error' : ''}"
+										required
+										minlength="6"
+										maxlength="128"
+										autocomplete="new-password"
+										placeholder="Minimal 6 karakter"
+									/>
+									{#if galat?.password}<p class="error-text">{galat.password}</p>{/if}
+								</div>
+								<div>
+									<label class="label" for="password_konfirmasi"
+										>Konfirmasi Password <span class="text-accent-600">*</span></label
+									>
+									<input
+										id="password_konfirmasi"
+										name="password_konfirmasi"
+										type="password"
+										class="input {galat?.password_konfirmasi ? 'input-error' : ''}"
+										required
+										minlength="6"
+										maxlength="128"
+										autocomplete="new-password"
+										placeholder="Ulangi password yang sama"
+									/>
+									{#if galat?.password_konfirmasi}
+										<p class="error-text">{galat.password_konfirmasi}</p>
+									{/if}
+								</div>
+							</div>
+							<p class="hint mt-3">
+								Dipakai untuk masuk sebagai anggota setelah pendaftaranmu disetujui pengurus — lewat
+								tab <b>Anggota</b> di halaman Masuk, dengan NIS sebagai nama akunmu.
+							</p>
 						</div>
 
 						<div class="grid gap-5 sm:grid-cols-2">
@@ -293,7 +367,7 @@
 									required
 									inputmode="tel"
 									placeholder="mis. 0812-3456-7890"
-									value={nilai.no_hp}
+									bind:value={nilai.no_hp}
 								/>
 								{#if galat?.no_hp}<p class="error-text">{galat.no_hp}</p>{/if}
 							</div>
@@ -302,11 +376,12 @@
 								<input
 									id="nama_ortu"
 									name="nama_ortu"
-									class="input"
+									class="input {galat?.nama_ortu ? 'input-error' : ''}"
 									maxlength="100"
 									placeholder="Opsional"
-									value={nilai.nama_ortu}
+									bind:value={nilai.nama_ortu}
 								/>
+								{#if galat?.nama_ortu}<p class="error-text">{galat.nama_ortu}</p>{/if}
 							</div>
 						</div>
 
@@ -316,10 +391,11 @@
 								id="alamat"
 								name="alamat"
 								rows="2"
-								class="input"
+								class="input {galat?.alamat ? 'input-error' : ''}"
 								maxlength="200"
-								placeholder="Opsional — mis. Dusun Krajan, Kedungreja">{nilai.alamat}</textarea
-							>
+								placeholder="Opsional — mis. Dusun Krajan, Kedungreja"
+								bind:value={nilai.alamat}></textarea>
+							{#if galat?.alamat}<p class="error-text">{galat.alamat}</p>{/if}
 						</div>
 
 						<div>
@@ -328,11 +404,11 @@
 								id="motivasi"
 								name="motivasi"
 								rows="3"
-								class="input"
+								class="input {galat?.motivasi ? 'input-error' : ''}"
 								maxlength="500"
 								placeholder="Opsional — ceritakan singkat mengapa kamu ingin bergabung"
-								>{nilai.motivasi}</textarea
-							>
+								bind:value={nilai.motivasi}></textarea>
+							{#if galat?.motivasi}<p class="error-text">{galat.motivasi}</p>{/if}
 						</div>
 
 						<button class="btn btn-primary btn-lg w-full" type="submit" disabled={memproses}>

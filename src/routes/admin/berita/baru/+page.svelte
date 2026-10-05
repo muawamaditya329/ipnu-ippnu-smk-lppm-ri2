@@ -9,4 +9,4 @@
 
 <h1 class="mb-6 font-display text-2xl font-extrabold text-stone-900">Tulis Berita Baru</h1>
 
-<BeritaForm galat={form?.galat ?? data.galat} />
+<BeritaForm galat={form?.galat ?? data.galat} nilai={form?.nilai ?? null} />

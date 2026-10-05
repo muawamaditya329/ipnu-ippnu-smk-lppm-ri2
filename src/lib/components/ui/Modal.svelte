@@ -24,14 +24,28 @@
 <svelte:window onkeydown={keydown} />
 
 {#if open}
-	<div class="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-stone-900/50 p-4 backdrop-blur-sm sm:p-8" role="dialog" aria-modal="true" aria-label={title}>
+	<div
+		class="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-stone-900/50 p-4 backdrop-blur-sm sm:p-8"
+		role="dialog"
+		aria-modal="true"
+		aria-label={title}
+	>
 		<!-- backdrop -->
-		<button class="absolute inset-0 h-full w-full cursor-default" aria-label="Tutup" onclick={tutup}></button>
+		<button class="absolute inset-0 h-full w-full cursor-default" aria-label="Tutup" onclick={tutup}
+		></button>
 
-		<div class="relative my-8 w-full {wide ? 'max-w-3xl' : 'max-w-lg'} rounded-2xl bg-white shadow-lift">
+		<div
+			class="relative my-8 w-full {wide
+				? 'max-w-3xl'
+				: 'max-w-lg'} rounded-lg border border-stone-200 bg-white shadow-overlay"
+		>
 			<div class="flex items-center justify-between border-b border-stone-200 px-6 py-4">
 				<h3 class="font-display text-lg font-bold text-stone-900">{title}</h3>
-				<button class="rounded-lg p-1.5 text-stone-400 hover:bg-stone-100 hover:text-stone-700" onclick={tutup} aria-label="Tutup dialog">
+				<button
+					class="rounded-lg p-1.5 text-stone-400 hover:bg-stone-100 hover:text-stone-700"
+					onclick={tutup}
+					aria-label="Tutup dialog"
+				>
 					<X class="h-5 w-5" />
 				</button>
 			</div>

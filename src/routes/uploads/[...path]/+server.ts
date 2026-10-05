@@ -1,7 +1,6 @@
 import { error } from '@sveltejs/kit';
 import { readFile } from 'node:fs/promises';
-import path from 'node:path';
-import { UPLOAD_DIR } from '#lib/server/db.ts';
+import { pathDalamUpload } from '#lib/server/uploads.ts';
 import type { RequestHandler } from './$types';
 
 const MIME: Record<string, string> = {
@@ -23,23 +22,25 @@ const MIME: Record<string, string> = {
 
 /** Melayani file unggahan dari data/uploads (aman dari path traversal). */
 export const GET: RequestHandler = async ({ params }) => {
-	const segmen = (params.path ?? '')
-		.replaceAll('\\', '/')
-		.split('/')
-		.filter((s) => s && s !== '.' && s !== '..');
-
-	if (!segmen.length) error(404, 'File tidak ditemukan');
-
-	const berkas = path.join(UPLOAD_DIR, ...segmen);
-	if (!berkas.startsWith(UPLOAD_DIR)) error(403, 'Akses ditolak');
+	const berkas = pathDalamUpload(params.path ?? '');
+	if (!berkas) error(404, 'File tidak ditemukan');
 
 	try {
 		const isi = await readFile(berkas);
-		const ekstensi = segmen.at(-1)?.split('.').pop()?.toLowerCase() ?? '';
+		const nama = berkas.split('/').at(-1) ?? '';
+		const ekstensi = nama.split('.').pop()?.toLowerCase() ?? '';
+		// hasOwn: lookup aman dari properti warisan prototype (mis. "constructor"),
+		// sehingga content-type selalu berupa nilai MIME yang sah.
+		const tipe = Object.hasOwn(MIME, ekstensi) ? MIME[ekstensi] : undefined;
 		return new Response(new Uint8Array(isi), {
 			headers: {
-				'content-type': MIME[ekstensi] ?? 'application/octet-stream',
-				'cache-control': 'public, max-age=86400'
+				'content-type': tipe ?? 'application/octet-stream',
+				'cache-control': 'public, max-age=86400',
+				// Sandbox: SVG (dan sejenisnya) tidak boleh mengeksekusi skrip saat dibuka langsung,
+				// meski tetap tampil normal sebagai <img> di halaman situs.
+				'content-security-policy': 'sandbox',
+				// Cegah browser "menebak" tipe file unggahan (mis. HTML berisi skrip).
+				'x-content-type-options': 'nosniff'
 			}
 		});
 	} catch {

@@ -11,7 +11,14 @@
 		Wallet
 	} from '@lucide/svelte';
 	import StatCard from '#lib/components/ui/StatCard.svelte';
-	import { fmtRp, fmtTanggal, fmtTanggalPendek, fmtWaktu, hariIni, pecahTanggal } from '#lib/utils.ts';
+	import {
+		fmtRp,
+		fmtTanggal,
+		fmtTanggalPendek,
+		fmtWaktu,
+		hariIni,
+		pecahTanggal
+	} from '#lib/utils.ts';
 	import type { PageProps } from './$types';
 
 	let { data }: PageProps = $props();
@@ -31,7 +38,13 @@
 
 <!-- Ringkasan -->
 <div class="mb-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-	<StatCard label="Anggota Aktif" value={data.anggotaAktif} icon={Users} tone="green" href="/admin/anggota" />
+	<StatCard
+		label="Anggota Aktif"
+		value={data.anggotaAktif}
+		icon={Users}
+		tone="green"
+		href="/admin/anggota"
+	/>
 	<StatCard
 		label="Menunggu Verifikasi"
 		value={data.menunggu}
@@ -40,8 +53,20 @@
 		hint={data.menunggu > 0 ? 'Perlu ditindak' : ''}
 		href="/admin/anggota?status=pending"
 	/>
-	<StatCard label="Saldo Kas" value={fmtRp(data.saldo)} icon={Wallet} tone="green" href="/admin/kas" />
-	<StatCard label="Berita Terbit" value={data.beritaTerbit} icon={Newspaper} tone="blue" href="/admin/berita" />
+	<StatCard
+		label="Saldo Kas"
+		value={fmtRp(data.saldo)}
+		icon={Wallet}
+		tone="amber"
+		href="/admin/kas"
+	/>
+	<StatCard
+		label="Berita Terbit"
+		value={data.beritaTerbit}
+		icon={Newspaper}
+		tone="blue"
+		href="/admin/berita"
+	/>
 </div>
 
 <!-- CTA cepat -->
@@ -57,12 +82,19 @@
 	<section class="card p-5">
 		<div class="mb-4 flex items-center justify-between gap-3">
 			<h2 class="font-display text-base font-bold text-stone-900">Pendaftar Terbaru</h2>
-			<a href="/admin/anggota?status=pending" class="text-sm font-semibold text-primary-700 hover:text-primary-800">Kelola &rarr;</a>
+			<a
+				href="/admin/anggota?status=pending"
+				class="text-sm font-semibold text-primary-700 hover:text-primary-800">Kelola &rarr;</a
+			>
 		</div>
 		{#if data.pendaftar.length === 0}
-			<div class="flex flex-col items-center rounded-xl border border-dashed border-stone-200 bg-stone-50/60 px-4 py-8 text-center">
+			<div
+				class="flex flex-col items-center rounded-xl border border-dashed border-stone-200 bg-stone-50/60 px-4 py-8 text-center"
+			>
 				<UsersRound class="h-6 w-6 text-stone-300" />
-				<p class="mt-2 text-sm font-medium text-stone-500">Belum ada pendaftar yang menunggu verifikasi.</p>
+				<p class="mt-2 text-sm font-medium text-stone-500">
+					Belum ada pendaftar yang menunggu verifikasi.
+				</p>
 			</div>
 		{:else}
 			<ul class="divide-y divide-stone-100">
@@ -71,7 +103,8 @@
 						<div class="min-w-0">
 							<p class="truncate text-sm font-semibold text-stone-900">{p.nama}</p>
 							<p class="text-xs text-stone-500">
-								{p.kelas ?? '—'} {p.jurusan ?? '—'} &middot; {fmtWaktu(p.created_at)}
+								{p.kelas ?? '—'}
+								{p.jurusan ?? '—'} &middot; {fmtWaktu(p.created_at)}
 							</p>
 						</div>
 						<span class="badge shrink-0 {p.jenis_kelamin === 'L' ? 'badge-green' : 'badge-red'}">
@@ -87,10 +120,14 @@
 	<section class="card p-5">
 		<div class="mb-4 flex items-center justify-between gap-3">
 			<h2 class="font-display text-base font-bold text-stone-900">Agenda Terdekat</h2>
-			<a href="/admin/agenda" class="text-sm font-semibold text-primary-700 hover:text-primary-800">Kelola &rarr;</a>
+			<a href="/admin/agenda" class="text-sm font-semibold text-primary-700 hover:text-primary-800"
+				>Kelola &rarr;</a
+			>
 		</div>
 		{#if data.agenda.length === 0}
-			<div class="flex flex-col items-center rounded-xl border border-dashed border-stone-200 bg-stone-50/60 px-4 py-8 text-center">
+			<div
+				class="flex flex-col items-center rounded-xl border border-dashed border-stone-200 bg-stone-50/60 px-4 py-8 text-center"
+			>
 				<CalendarDays class="h-6 w-6 text-stone-300" />
 				<p class="mt-2 text-sm font-medium text-stone-500">Belum ada agenda terjadwal ke depan.</p>
 			</div>
@@ -99,9 +136,13 @@
 				{#each data.agenda as a (a.id)}
 					{@const t = pecahTanggal(a.tanggal)}
 					<li class="flex items-center gap-3">
-						<div class="flex h-12 w-12 shrink-0 flex-col items-center justify-center rounded-xl bg-primary-50 leading-none text-primary-800">
-							<span class="font-display text-base font-extrabold">{t.d}</span>
-							<span class="mt-0.5 text-[10px] font-bold tracking-wide">{t.m}</span>
+						<div
+							class="aksen-ipnu flex w-11 shrink-0 flex-col items-center justify-center border border-stone-200 py-1.5 leading-none"
+						>
+							<span class="font-display text-base font-bold text-stone-900">{t.d}</span>
+							<span class="mt-0.5 text-[9px] font-semibold tracking-wide text-stone-500 uppercase"
+								>{t.m}</span
+							>
 						</div>
 						<div class="min-w-0">
 							<p class="truncate text-sm font-semibold text-stone-900">{a.judul}</p>
@@ -119,10 +160,14 @@
 	<section class="card p-5">
 		<div class="mb-4 flex items-center justify-between gap-3">
 			<h2 class="font-display text-base font-bold text-stone-900">Kas Terbaru</h2>
-			<a href="/admin/kas" class="text-sm font-semibold text-primary-700 hover:text-primary-800">Kelola &rarr;</a>
+			<a href="/admin/kas" class="text-sm font-semibold text-primary-700 hover:text-primary-800"
+				>Kelola &rarr;</a
+			>
 		</div>
 		{#if data.kas.length === 0}
-			<div class="flex flex-col items-center rounded-xl border border-dashed border-stone-200 bg-stone-50/60 px-4 py-8 text-center">
+			<div
+				class="flex flex-col items-center rounded-xl border border-dashed border-stone-200 bg-stone-50/60 px-4 py-8 text-center"
+			>
 				<Wallet class="h-6 w-6 text-stone-300" />
 				<p class="mt-2 text-sm font-medium text-stone-500">Belum ada transaksi kas tercatat.</p>
 			</div>
@@ -134,7 +179,11 @@
 							<p class="truncate text-sm font-semibold text-stone-900">{k.keterangan}</p>
 							<p class="text-xs text-stone-500">{fmtTanggal(k.tanggal)}</p>
 						</div>
-						<span class="shrink-0 text-sm font-bold {k.jenis === 'masuk' ? 'text-primary-700' : 'text-accent-700'}">
+						<span
+							class="shrink-0 text-sm font-bold {k.jenis === 'masuk'
+								? 'text-primary-700'
+								: 'text-accent-700'}"
+						>
 							{k.jenis === 'masuk' ? '+' : '-'}{fmtRp(k.jumlah)}
 						</span>
 					</li>

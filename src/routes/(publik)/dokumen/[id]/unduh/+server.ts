@@ -1,7 +1,7 @@
 import { error } from '@sveltejs/kit';
 import { readFile } from 'node:fs/promises';
-import path from 'node:path';
-import { UPLOAD_DIR, db, type DocumentItem } from '#lib/server/db.ts';
+import { db, type DocumentItem } from '#lib/server/db.ts';
+import { pathDalamUpload } from '#lib/server/uploads.ts';
 import type { RequestHandler } from './$types';
 
 /** Baca file dokumen dari direktori unggahan; 404 bila file hilang. */
@@ -22,35 +22,32 @@ export const GET: RequestHandler = async ({ params }) => {
 
 	if (!dokumen) error(404, 'Dokumen tidak ditemukan');
 
-	db.prepare('UPDATE documents SET downloads = downloads + 1 WHERE id = ?').run(dokumen.id);
-
-	// Path relatif di kolom `file` sudah dari sistem unggahan, tetap disanitasi seperti /uploads/[...path].
-	const segmen = dokumen.file
-		.replaceAll('\\', '/')
-		.split('/')
-		.filter((s) => s && s !== '.' && s !== '..');
-	if (!segmen.length) error(404, 'File dokumen tidak ditemukan');
-
-	const berkas = path.join(UPLOAD_DIR, ...segmen);
-	if (!berkas.startsWith(UPLOAD_DIR)) error(403, 'Akses ditolak');
+	// Path relatif di kolom `file` berasal dari sistem unggahan, tetap disanitasi
+	// + dipastikan berada di dalam data/uploads (sama seperti /uploads/[...path]).
+	const berkas = pathDalamUpload(dokumen.file);
+	if (!berkas) error(404, 'File dokumen tidak ditemukan');
 
 	const isi = await bacaFile(berkas);
 
-	const ekstensi = segmen.at(-1)?.split('.').pop() ?? '';
+	// Penghitung hanya bertambah bila file benar-benar berhasil dibaca & dikirim.
+	db.prepare('UPDATE documents SET downloads = downloads + 1 WHERE id = ?').run(dokumen.id);
+
+	const namaTersimpan = berkas.split('/').at(-1) ?? '';
+	const ekstensi = namaTersimpan.split('.').pop() ?? '';
 	const namaUnduh =
 		dokumen.nama_file || (ekstensi ? `${dokumen.judul}.${ekstensi}` : dokumen.judul);
-	// Escape tanda kutip, pemisah jalur, dan karakter tak valid utk header Content-Disposition.
-	const namaAman =
-		namaUnduh
-			.replace(/[/\\:*?<>|]/g, '-')
-			.replaceAll('"', "'")
-			.replace(/[\r\n]/g, '')
-			.trim() || 'dokumen';
+	// Buang SEMUA karakter kontrol (C0 + DEL, termasuk CR/LF) agar tidak ada cara
+	// memecah/menyuntik header Content-Disposition, lalu Escape tanda kutip,
+	// pemisah jalur, dan pemisah parameter header.
+	// eslint-disable-next-line no-control-regex -- kelas karakter kontrol memang tujuannya
+	const namaBersih = namaUnduh.replace(/[\u0000-\u001f\u007f]/g, '').trim();
+	const namaAman = namaBersih.replace(/[/\\:*?<>|"]/g, '-').trim() || 'dokumen';
 
 	return new Response(new Uint8Array(isi), {
 		headers: {
 			'content-type': 'application/octet-stream',
-			'content-disposition': `attachment; filename="${namaAman}"; filename*=UTF-8''${encodeURIComponent(namaUnduh)}`
+			'content-disposition': `attachment; filename="${namaAman}"; filename*=UTF-8''${encodeURIComponent(namaBersih)}`,
+			'x-content-type-options': 'nosniff'
 		}
 	});
 };

@@ -3,12 +3,66 @@
 
 /* ============================================================
    Design System — Komisariat IPNU & IPPNU SMK LPPM RI 2 Kedungreja
-   primary = hijau (IPNU/NU) · accent = merah (IPPNU) · gold = aksen
+   Arah: "berkas resmi + papan pengumuman pesantren" (lihat DESIGN.md, mengikat).
+
+   ATURAN WARNA — "HIJAU = TINTA":
+   primary (hijau NU) dipakai seperti tinta pada dokumen resmi —
+   teks aksen, header blok, garis. BUKAN cat air: dilarang section
+   penuh bg-primary-50, kartu bg-primary-100, chip ikon pastel.
+   accent (merah) hanya menandai IPPNU (garis/badge kecil).
+   gold hanya aksen tipis: garis 2px, nomor section, satu tombol
+   CTA pendaftaran (btn-gold). Latar halaman: kertas stone-50/white,
+   teks tinta stone-900.
    ============================================================ */
 
+/* Tipografi self-host (woff2 di /static/fonts) — situs tetap jalan tanpa internet.
+   Archivo & Fraunces variabel: satu berkas mencakup seluruh rentang weight. */
+@font-face {
+	font-family: 'Archivo';
+	font-style: normal;
+	font-weight: 100 900;
+	font-display: swap;
+	src: url('/fonts/archivo-latin-ext.woff2') format('woff2');
+	unicode-range:
+		U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329,
+		U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F,
+		U+A720-A7FF;
+}
+@font-face {
+	font-family: 'Archivo';
+	font-style: normal;
+	font-weight: 100 900;
+	font-display: swap;
+	src: url('/fonts/archivo-latin.woff2') format('woff2');
+	unicode-range:
+		U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329,
+		U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+@font-face {
+	font-family: 'Fraunces';
+	font-style: normal;
+	font-weight: 100 900;
+	font-display: swap;
+	src: url('/fonts/fraunces-latin-ext.woff2') format('woff2');
+	unicode-range:
+		U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329,
+		U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F,
+		U+A720-A7FF;
+}
+@font-face {
+	font-family: 'Fraunces';
+	font-style: normal;
+	font-weight: 100 900;
+	font-display: swap;
+	src: url('/fonts/fraunces-latin.woff2') format('woff2');
+	unicode-range:
+		U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329,
+		U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
 @theme {
-	--font-sans: 'Inter', ui-sans-serif, system-ui, -apple-system, sans-serif;
-	--font-display: 'Plus Jakarta Sans', 'Inter', ui-sans-serif, system-ui, sans-serif;
+	--font-sans: 'Archivo', ui-sans-serif, system-ui, -apple-system, sans-serif;
+	--font-display: 'Fraunces', 'Georgia', ui-serif, serif;
 
 	--color-primary-50: #ecfdf5;
 	--color-primary-100: #d1fae5;
@@ -45,8 +99,19 @@
 	--color-gold-800: #92400e;
 	--color-gold-900: #78350f;
 
-	--shadow-soft: 0 1px 3px rgb(0 0 0 / 0.06), 0 8px 24px -12px rgb(0 0 0 / 0.12);
-	--shadow-lift: 0 2px 6px rgb(0 0 0 / 0.07), 0 16px 40px -16px rgb(0 0 0 / 0.18);
+	/* Radius tegas seperti dokumen: kartu & tombol maks lg (10px);
+	   xl (12px) hanya untuk media/foto. 2xl/3xl disamakan agar
+	   pemakaian lama tidak pernah lebih membulat dari itu. */
+	--radius-sm: 4px;
+	--radius-md: 6px;
+	--radius-lg: 10px;
+	--radius-xl: 12px;
+	--radius-2xl: 12px;
+	--radius-3xl: 12px;
+
+	/* Bayangan hanya satu level, untuk overlay (modal, dropdown).
+	   Kartu & section datar — tidak ada bayangan. */
+	--shadow-overlay: 0 2px 4px rgb(28 25 23 / 0.1), 0 20px 48px -20px rgb(28 25 23 / 0.32);
 }
 
 /* ---------- Base ---------- */
@@ -56,9 +121,12 @@
 		scroll-behavior: smooth;
 	}
 	body {
-		@apply bg-stone-50 font-sans text-stone-800 antialiased;
+		@apply bg-stone-50 font-sans text-stone-900 antialiased;
 	}
-	h1, h2, h3, h4 {
+	h1,
+	h2,
+	h3,
+	h4 {
 		@apply font-display tracking-tight;
 	}
 	::selection {
@@ -66,7 +134,9 @@
 	}
 }
 
-/* ---------- Pola geometris islami (latar hero/section) ---------- */
+/* ---------- Pola geometris islami ----------
+   Hanya pada satu blok hijau tua per halaman (footer/header kategori)
+   dan kartu anggota. Dilarang menempelkan pola di section kertas. */
 
 .pattern-islamic {
 	background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='72' height='72' viewBox='0 0 72 72'%3E%3Cg fill='none' stroke='%23ffffff' stroke-opacity='0.14'%3E%3Cpath d='M36 4l8 24 24 8-24 8-8 24-8-24-24-8 24-8z'/%3E%3Ccircle cx='36' cy='36' r='10'/%3E%3C/g%3E%3C/svg%3E");
@@ -80,47 +150,49 @@
 
 @layer components {
 	.btn {
-		@apply inline-flex cursor-pointer items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold transition
-			focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-600
-			disabled:cursor-not-allowed disabled:opacity-50;
+		@apply inline-flex cursor-pointer items-center justify-center gap-2 rounded-md border border-transparent px-3.5 py-2 text-sm font-semibold transition focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-700 disabled:cursor-not-allowed disabled:opacity-50;
 	}
+	/* Tombol tegas tanpa bayangan; primary = hijau tinta. */
 	.btn-primary {
-		@apply bg-primary-700 text-white shadow-sm hover:bg-primary-800 active:bg-primary-900;
+		@apply bg-primary-800 text-white hover:bg-primary-900 active:bg-primary-950;
 	}
 	.btn-accent {
-		@apply bg-accent-700 text-white shadow-sm hover:bg-accent-800;
+		@apply bg-accent-700 text-white hover:bg-accent-800;
 	}
 	.btn-outline {
-		@apply border border-stone-300 bg-white text-stone-700 shadow-sm hover:border-primary-600 hover:text-primary-700;
+		@apply border-stone-300 bg-white text-stone-800 hover:border-stone-500 hover:text-stone-950;
 	}
 	.btn-ghost {
 		@apply text-stone-600 hover:bg-stone-100 hover:text-stone-900;
 	}
 	.btn-danger {
-		@apply border border-accent-200 bg-accent-50 text-accent-700 hover:bg-accent-100;
+		@apply bg-accent-700 text-white hover:bg-accent-800;
 	}
+	/* Emas murni untuk CTA pendaftaran anggota — jangan dipakai di tempat lain. */
 	.btn-gold {
-		@apply bg-gold-400 text-stone-900 shadow-sm hover:bg-gold-300;
+		@apply bg-gold-400 text-stone-900 hover:bg-gold-300;
 	}
 	.btn-sm {
-		@apply rounded-lg px-3 py-1.5 text-xs;
+		@apply px-3 py-1.5 text-xs;
 	}
 	.btn-lg {
-		@apply rounded-2xl px-6 py-3.5 text-base;
+		@apply rounded-lg px-5 py-3 text-base;
 	}
 
+	/* Kartu datar: kertas putih + garis 1px. Tanpa bayangan.
+	   Terangkat hanya lewat perubahan warna garis saat hover tautan. */
 	.card {
-		@apply rounded-2xl border border-stone-200 bg-white shadow-soft;
+		@apply rounded-lg border border-stone-200 bg-white;
+	}
+	.card-hover {
+		@apply transition hover:border-stone-400;
 	}
 
 	.label {
-		@apply mb-1.5 block text-sm font-semibold text-stone-700;
+		@apply mb-1.5 block text-[11px] font-semibold tracking-[0.08em] text-stone-600 uppercase;
 	}
 	.input {
-		@apply block w-full rounded-xl border border-stone-300 bg-white px-3.5 py-2.5 text-sm text-stone-900 shadow-sm transition
-			placeholder:text-stone-400
-			focus:border-primary-600 focus:outline-none focus:ring-2 focus:ring-primary-600/20
-			disabled:cursor-not-allowed disabled:bg-stone-100;
+		@apply block w-full rounded-md border border-stone-300 bg-white px-3 py-2 text-sm text-stone-900 transition placeholder:text-stone-400 focus:border-primary-700 focus:ring-1 focus:ring-primary-700/30 focus:outline-none disabled:cursor-not-allowed disabled:bg-stone-100;
 	}
 	.input-error {
 		@apply border-accent-400 focus:border-accent-500 focus:ring-accent-500/20;
@@ -132,27 +204,50 @@
 		@apply mt-1.5 text-xs font-medium text-accent-600;
 	}
 
+	/* Badge stempel arsip: kotak, bukan pill — garis 1px + teks berwarna. */
 	.badge {
-		@apply inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-semibold;
+		@apply inline-flex items-center gap-1 border bg-white px-1.5 py-0.5 text-[10px] leading-[1.5] font-semibold tracking-[0.08em] uppercase;
 	}
 	.badge-green {
-		@apply bg-primary-100 text-primary-800;
+		@apply border-primary-700/40 text-primary-800;
 	}
 	.badge-red {
-		@apply bg-accent-100 text-accent-800;
+		@apply border-accent-700/40 text-accent-800;
 	}
 	.badge-amber {
-		@apply bg-gold-100 text-gold-800;
+		@apply border-gold-600/50 text-gold-800;
 	}
 	.badge-gray {
-		@apply bg-stone-100 text-stone-600;
+		@apply border-stone-400/60 text-stone-600;
 	}
 	.badge-blue {
-		@apply bg-sky-100 text-sky-800;
+		@apply border-sky-700/40 text-sky-800;
+	}
+
+	/* Kicker: label kecil editorial, rata kiri — bukan eyebrow terpusat. */
+	.kicker {
+		@apply block text-[11px] font-semibold tracking-[0.14em] text-stone-500 uppercase;
+	}
+
+	/* Nomor urut section (01, 02, …) — angka emas Fraunces. */
+	.rule-num {
+		@apply font-display text-sm font-bold tracking-wide text-gold-700;
+	}
+
+	/* Garis aksen kiri 2px — gaya stempel/arsip.
+	   Didefinisikan SETELAH .card agar menang di sisi kiri saat digabung. */
+	.aksen-ipnu {
+		@apply border-l-2 border-l-primary-800;
+	}
+	.aksen-ippnu {
+		@apply border-l-2 border-l-accent-700;
+	}
+	.aksen-kas {
+		@apply border-l-2 border-l-gold-500;
 	}
 
 	.th {
-		@apply px-4 py-3 text-left text-xs font-bold tracking-wide text-stone-500 uppercase;
+		@apply px-4 py-2.5 text-left text-[11px] font-semibold tracking-[0.08em] text-stone-500 uppercase;
 	}
 	.td {
 		@apply px-4 py-3 text-sm text-stone-700;

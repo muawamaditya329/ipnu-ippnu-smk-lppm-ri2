@@ -4,6 +4,7 @@
 	import Modal from '#lib/components/ui/Modal.svelte';
 	import { fmtTanggalPendek, KATEGORI_DOKUMEN, ukuranFile } from '#lib/utils.ts';
 	import type { DocumentItem } from '#lib/server/db.ts';
+	import { kirimJikaSetuju } from '#lib/konfirmasi.svelte.ts';
 	import type { PageProps } from './$types';
 
 	let { data, form }: PageProps = $props();
@@ -131,9 +132,7 @@
 						<td class="td"><span class="badge badge-blue">{d.kategori}</span></td>
 						<td class="td whitespace-nowrap">{ukuranFile(d.ukuran)}</td>
 						<td class="td">{d.downloads}</td>
-						<td class="td text-xs whitespace-nowrap"
-							>{fmtTanggalPendek(d.created_at.slice(0, 10))}</td
-						>
+						<td class="td text-xs whitespace-nowrap">{fmtTanggalPendek(d.created_at)}</td>
 						<td class="td">
 							<div class="flex justify-end gap-1.5">
 								<button
@@ -146,9 +145,12 @@
 								<form
 									method="POST"
 									action="?/hapus&id={d.id}"
-									onsubmit={(e) => {
-										if (!confirm(`Hapus dokumen "${d.judul}"?`)) e.preventDefault();
-									}}
+									onsubmit={(e) =>
+										kirimJikaSetuju(e, {
+											judul: 'Hapus Dokumen',
+											pesan: `Dokumen "${d.judul}" akan dihapus permanen dan tidak bisa diunduh lagi.`,
+											tombol: 'Hapus'
+										})}
 								>
 									<button class="btn btn-danger btn-sm" aria-label="Hapus {d.judul}"
 										><Trash2 class="h-3.5 w-3.5" /></button
@@ -212,9 +214,10 @@
 				name="deskripsi"
 				rows="3"
 				maxlength="400"
-				class="input"
+				class="input {galat?.deskripsi ? 'input-error' : ''}"
 				placeholder="Jelaskan isi & kegunaan dokumen…"
 				bind:value={deskripsiForm}></textarea>
+			{#if galat?.deskripsi}<p class="error-text">{galat.deskripsi}</p>{/if}
 		</div>
 
 		<div>
@@ -225,6 +228,7 @@
 				{/each}
 			</select>
 			<p class="hint">Dokumen dikelompokkan per kategori di halaman publik.</p>
+			{#if galat?.kategori}<p class="error-text">{galat.kategori}</p>{/if}
 		</div>
 
 		<div>

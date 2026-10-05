@@ -19,7 +19,10 @@ const DEFAULTS: Settings = {
 };
 
 export function getSettings(): Settings {
-	const rows = db.prepare('SELECT key, value FROM settings').all() as { key: string; value: string }[];
+	const rows = db.prepare('SELECT key, value FROM settings').all() as {
+		key: string;
+		value: string;
+	}[];
 	const map: Settings = { ...DEFAULTS };
 	for (const r of rows) map[r.key] = r.value;
 	return map;

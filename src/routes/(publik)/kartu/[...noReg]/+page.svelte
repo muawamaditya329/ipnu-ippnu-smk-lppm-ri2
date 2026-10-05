@@ -21,23 +21,20 @@
 
 <section class="mx-auto max-w-4xl px-4 py-10 sm:px-6">
 	<!-- Instruksi (tidak ikut tercetak) -->
-	<div class="no-print mb-8 text-center">
-		<p class="text-xs font-bold tracking-widest text-primary-600 uppercase">
-			Kartu Anggota Digital
-		</p>
-		<h1 class="mt-2 font-display text-2xl font-extrabold text-stone-900">
+	<div class="no-print mb-8">
+		<p class="kicker">Kartu Anggota Digital</p>
+		<h1 class="mt-2 font-display text-2xl font-bold tracking-tight text-stone-900 sm:text-3xl">
 			Kartu Anggota {ipnu ? 'IPNU' : 'IPPNU'}
 		</h1>
-		<p class="mx-auto mt-2 max-w-lg text-sm text-stone-500">
-			Perlihatkan kartu ini saat kegiatan komisariat, atau cetak untuk disimpan.
+		<p class="mt-2 max-w-xl text-sm leading-relaxed text-stone-600">
+			Perlihatkan kartu ini saat kegiatan komisariat, atau cetak untuk disimpan. Kartu memakai blok
+			hijau penuh sebagai pengecualian resmi sistem desain.
 		</p>
 	</div>
 
 	<!-- Kartu anggota -->
 	<div class="print-area flex justify-center bg-white">
-		<div
-			class="w-full max-w-lg overflow-hidden rounded-2xl border border-stone-200 bg-white shadow-lift"
-		>
+		<div class="w-full max-w-lg overflow-hidden rounded-lg border border-stone-200 bg-white">
 			<!-- Kepala kartu (gradasi warna + pola islami sebagai lapisan terpisah) -->
 			<header
 				class="relative bg-gradient-to-br p-5 text-white {ipnu
@@ -66,9 +63,11 @@
 							</p>
 						</div>
 					</div>
-					<span class="rounded-full bg-white/15 px-3 py-1 text-[11px] font-bold">
-						Periode {data.settings.periode}
-					</span>
+					{#if data.settings.periode}
+						<span class="rounded-full bg-white/15 px-3 py-1 text-[11px] font-bold">
+							Periode {data.settings.periode}
+						</span>
+					{/if}
 				</div>
 			</header>
 
@@ -126,12 +125,12 @@
 	</div>
 
 	<!-- Aksi (tidak ikut tercetak) -->
-	<div class="no-print mt-8 text-center">
-		<button class="btn btn-primary btn-lg" onclick={() => window.print()}>
-			<Printer class="h-5 w-5" /> Cetak Kartu
+	<div class="no-print mt-8">
+		<button class="btn btn-primary" onclick={() => window.print()}>
+			<Printer class="h-4 w-4" aria-hidden="true" /> Cetak Kartu
 		</button>
 		<p class="mt-3 flex items-center justify-center gap-1.5 text-xs text-stone-400">
-			<Info class="h-3.5 w-3.5 shrink-0" />
+			<Info class="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
 			Saat mencetak, aktifkan opsi "Background graphics" agar warna kartu ikut tercetak.
 		</p>
 	</div>
