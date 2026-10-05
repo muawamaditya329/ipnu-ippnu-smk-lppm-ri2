@@ -22,6 +22,14 @@
 		selesai: 'badge-gray',
 		dibatalkan: 'badge-red'
 	};
+	// Tone jenis sama dengan halaman publik /agenda: rutin & kajian hijau, rapat biru, lomba amber.
+	const badgeJenis: Record<string, string> = {
+		rutin: 'badge-green',
+		kajian: 'badge-green',
+		rapat: 'badge-blue',
+		lomba: 'badge-amber',
+		kegiatan: 'badge-gray'
+	};
 	const badgeCakupan: Record<string, string> = {
 		umum: 'badge-blue',
 		ipnu: 'badge-green',
@@ -41,14 +49,27 @@
 		deskripsi: ''
 	});
 
+	/** Susun ulang isian modal dari `nilai` yang dikirim server saat validasi gagal. */
+	const isiDariServer = (n: Record<string, string> | null) => ({
+		judul: n?.judul ?? '',
+		jenis: n?.jenis ?? 'kegiatan',
+		cakupan: n?.cakupan ?? 'umum',
+		lokasi: n?.lokasi ?? '',
+		tanggal: n?.tanggal || hariIni(),
+		jam: n?.jam ?? '',
+		tanggal_selesai: n?.tanggal_selesai ?? '',
+		status: n?.status ?? 'terjadwal',
+		deskripsi: n?.deskripsi ?? ''
+	});
+
 	let buka = $state(false);
-	let edit: EventItem | null = $state(null);
+	let editId = $state<number | null>(null);
 	let nilai = $state(kosong());
 	let galat: Record<string, string> | null = $state(null);
 	let menyimpan = $state(false);
 
 	const bukaTambah = () => {
-		edit = null;
+		editId = null;
 		nilai = kosong();
 		galat = null;
 		menyimpan = false;
@@ -56,7 +77,7 @@
 	};
 
 	const bukaUbah = (item: EventItem) => {
-		edit = item;
+		editId = item.id;
 		nilai = {
 			judul: item.judul,
 			jenis: item.jenis,
@@ -77,14 +98,28 @@
 		buka = false;
 	};
 
-	// Reaksi terhadap hasil form action: tutup modal saat sukses, tampilkan galat saat gagal.
+	// Reaksi terhadap hasil form action. Submit native memuat ulang halaman sehingga
+	// seluruh state reset: sukses → biarkan modal tertutup; gagal validasi → buka ulang
+	// modal yang bersangkutan dan isi ulang isian dari data server.
 	$effect(() => {
-		if (form?.sukses) {
-			menyimpan = false;
+		if (!form) return;
+		menyimpan = false;
+		if (form.sukses) {
 			buka = false;
-		} else if (form?.galat) {
+			galat = null;
+		} else if (form.modal === 'buat') {
+			editId = null;
+			nilai = isiDariServer(form.nilai);
 			galat = form.galat;
-			menyimpan = false;
+			buka = true;
+		} else if (form.modal === 'ubah' && form.id != null) {
+			editId = form.id;
+			nilai = isiDariServer(form.nilai);
+			galat = form.galat;
+			buka = true;
+		} else if (form.galat) {
+			// Galat tanpa modal (mis. hapus gagal) — tampil sebagai banner di luar modal.
+			galat = form.galat;
 		}
 	});
 </script>
@@ -179,7 +214,11 @@
 									{item.deskripsi}
 								</p>{/if}
 						</td>
-						<td class="td">{LABEL_JENIS_AGENDA[item.jenis] ?? item.jenis}</td>
+						<td class="td"
+							><span class="badge {badgeJenis[item.jenis] ?? 'badge-gray'}"
+								>{LABEL_JENIS_AGENDA[item.jenis] ?? item.jenis}</span
+							></td
+						>
 						<td class="td">
 							<span class="font-medium text-stone-900">{fmtTanggalPendek(item.tanggal)}</span>
 							{#if item.jam}
@@ -244,10 +283,10 @@
 	</div>
 {/if}
 
-<Modal open={buka} title={edit ? 'Ubah Agenda' : 'Tambah Agenda'} onclose={tutupModal} wide>
+<Modal open={buka} title={editId ? 'Ubah Agenda' : 'Tambah Agenda'} onclose={tutupModal} wide>
 	<form
 		method="POST"
-		action={edit ? `?/ubah&id=${edit.id}` : '?/buat'}
+		action={editId ? `?/ubah&id=${editId}` : '?/buat'}
 		class="space-y-4"
 		onsubmit={() => (menyimpan = true)}
 	>
@@ -385,7 +424,7 @@
 		<div class="flex items-center justify-end gap-2 border-t border-stone-200 pt-4">
 			<button type="button" class="btn btn-ghost" onclick={tutupModal}>Batal</button>
 			<button type="submit" class="btn btn-primary" disabled={menyimpan}>
-				{menyimpan ? 'Menyimpan…' : edit ? 'Simpan Perubahan' : 'Tambah Agenda'}
+				{menyimpan ? 'Menyimpan…' : editId ? 'Simpan Perubahan' : 'Tambah Agenda'}
 			</button>
 		</div>
 	</form>

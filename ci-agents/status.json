@@ -28,5 +28,11 @@
     "waktu": "2026-10-05T09:37:41Z",
     "judul": "uji:berita",
     "run": "https://github.com/muawamaditya329/ipnu-ippnu-smk-lppm-ri2/actions/runs/37289309660"
+  },
+  "006-uji-agenda": {
+    "status": "selesai",
+    "waktu": "2026-10-05T09:53:45Z",
+    "judul": "uji:agenda",
+    "run": "https://github.com/muawamaditya329/ipnu-ippnu-smk-lppm-ri2/actions/runs/37291299313"
   }
 }

@@ -8,6 +8,41 @@ const JENIS_AGENDA = ['rutin', 'kegiatan', 'rapat', 'kajian', 'lomba'];
 const CAKUPAN = ['umum', 'ipnu', 'ippnu'];
 const STATUS_AGENDA = ['terjadwal', 'selesai', 'dibatalkan'];
 
+/** Isian formulir agenda yang dikembalikan server agar modal terisi ulang saat gagal. */
+type NilaiForm = {
+	judul: string;
+	jenis: string;
+	cakupan: string;
+	lokasi: string;
+	tanggal: string;
+	jam: string;
+	tanggal_selesai: string;
+	status: string;
+	deskripsi: string;
+};
+
+/** Bentuk seragam utk semua return action agar `form?.galat` dsb. mudah ditipkan di halaman. */
+type HasilAksi = {
+	sukses: boolean;
+	pesan: string | null;
+	galat: Record<string, string> | null;
+	nilai: NilaiForm | null;
+	/** Modal yang harus dibuka ulang setelah gagal validasi. */
+	modal: 'buat' | 'ubah' | null;
+	/** Agenda target aksi ubah (utk membuka ulang modalnya). */
+	id: number | null;
+};
+
+/** Kerangka return action yang belum berisi apa pun (di-spread lalu dioverride per aksi). */
+const kosong: HasilAksi = {
+	sukses: false,
+	pesan: null,
+	galat: null,
+	nilai: null,
+	modal: null,
+	id: null
+};
+
 export const load: PageServerLoad = async ({ url }) => {
 	const jenisParam = url.searchParams.get('jenis') ?? '';
 	const statusParam = url.searchParams.get('status') ?? '';
@@ -36,7 +71,7 @@ export const load: PageServerLoad = async ({ url }) => {
 };
 
 /** Baca & validasi form agenda. */
-function bacaForm(fd: FormData): { nilai: Record<string, string>; galat: Record<string, string> } {
+function bacaForm(fd: FormData): { nilai: NilaiForm; galat: Record<string, string> } {
 	const judul = String(fd.get('judul') ?? '').trim();
 	const jenisMentah = String(fd.get('jenis') ?? 'kegiatan');
 	const cakupanMentah = String(fd.get('cakupan') ?? 'umum');
@@ -47,7 +82,7 @@ function bacaForm(fd: FormData): { nilai: Record<string, string>; galat: Record<
 	const statusMentah = String(fd.get('status') ?? 'terjadwal');
 	const deskripsi = String(fd.get('deskripsi') ?? '').trim();
 
-	const nilai: Record<string, string> = {
+	const nilai: NilaiForm = {
 		judul,
 		jenis: JENIS_AGENDA.includes(jenisMentah) ? jenisMentah : 'kegiatan',
 		cakupan: CAKUPAN.includes(cakupanMentah) ? cakupanMentah : 'umum',
@@ -95,10 +130,13 @@ function bacaForm(fd: FormData): { nilai: Record<string, string>; galat: Record<
 
 export const actions: Actions = {
 	buat: async ({ request, locals }) => {
-		if (!locals.user) return fail(401, { galat: { umum: 'Sesi berakhir. Silakan masuk ulang.' } });
+		if (!locals.user) redirect(303, '/masuk');
 
 		const { nilai, galat } = bacaForm(await request.formData());
-		if (Object.keys(galat).length) return fail(400, { galat });
+		if (Object.keys(galat).length) {
+			// `modal` + `nilai` dipakai halaman utk membuka ulang modal & mengisi ulang isian.
+			return fail(400, { ...kosong, galat, nilai, modal: 'buat' } satisfies HasilAksi);
+		}
 
 		db.prepare(
 			`INSERT INTO events (judul, deskripsi, jenis, lokasi, tanggal, jam, tanggal_selesai, cakupan, status)
@@ -115,19 +153,21 @@ export const actions: Actions = {
 			nilai.status
 		);
 
-		return { sukses: true, pesan: `Agenda "${nilai.judul}" berhasil ditambahkan.` };
+		return { ...kosong, sukses: true, pesan: `Agenda "${nilai.judul}" berhasil ditambahkan.` };
 	},
 
 	ubah: async ({ request, url, locals }) => {
-		if (!locals.user) return fail(401, { galat: { umum: 'Sesi berakhir. Silakan masuk ulang.' } });
+		if (!locals.user) redirect(303, '/masuk');
 
 		const id = Number(url.searchParams.get('id'));
 		if (!Number.isInteger(id) || id <= 0) {
-			return fail(400, { galat: { umum: 'Agenda tidak ditemukan.' } });
+			return fail(400, { ...kosong, galat: { umum: 'Agenda tidak ditemukan.' } });
 		}
 
 		const { nilai, galat } = bacaForm(await request.formData());
-		if (Object.keys(galat).length) return fail(400, { galat });
+		if (Object.keys(galat).length) {
+			return fail(400, { ...kosong, galat, nilai, modal: 'ubah', id } satisfies HasilAksi);
+		}
 
 		const hasil = db
 			.prepare(
@@ -148,10 +188,13 @@ export const actions: Actions = {
 			);
 
 		if (hasil.changes === 0) {
-			return fail(404, { galat: { umum: 'Agenda tidak ditemukan atau sudah dihapus.' } });
+			return fail(404, {
+				...kosong,
+				galat: { umum: 'Agenda tidak ditemukan atau sudah dihapus.' }
+			} satisfies HasilAksi);
 		}
 
-		return { sukses: true, pesan: `Agenda "${nilai.judul}" berhasil diperbarui.` };
+		return { ...kosong, sukses: true, pesan: `Agenda "${nilai.judul}" berhasil diperbarui.` };
 	},
 
 	hapus: async ({ url, locals }) => {
@@ -159,7 +202,7 @@ export const actions: Actions = {
 
 		const id = Number(url.searchParams.get('id'));
 		if (!Number.isInteger(id) || id <= 0) {
-			return fail(404, { galat: { umum: 'Agenda tidak ditemukan.' } });
+			return fail(404, { ...kosong, galat: { umum: 'Agenda tidak ditemukan.' } });
 		}
 
 		const agenda = db.prepare('SELECT id, poster FROM events WHERE id = ?').get(id) as
@@ -168,9 +211,12 @@ export const actions: Actions = {
 		if (agenda) {
 			hapusUnggahan(agenda.poster);
 			db.prepare('DELETE FROM events WHERE id = ?').run(id);
-			return { sukses: true, pesan: 'Agenda berhasil dihapus.' };
+			return { ...kosong, sukses: true, pesan: 'Agenda berhasil dihapus.' };
 		}
 
-		return fail(404, { galat: { umum: 'Agenda tidak ditemukan atau sudah dihapus.' } });
+		return fail(404, {
+			...kosong,
+			galat: { umum: 'Agenda tidak ditemukan atau sudah dihapus.' }
+		} satisfies HasilAksi);
 	}
 };
