@@ -1,4 +1,5 @@
 import { db, type EventItem, type Post } from '#lib/server/db.ts';
+import { KOLOM_POSTS } from '#lib/server/berita.ts';
 import { hariIni } from '#lib/utils.ts';
 import type { PageServerLoad } from './$types';
 
@@ -21,8 +22,8 @@ export const load: PageServerLoad = async () => {
 	// 1 jadi berita unggulan beranda, sisanya masuk daftar pendamping.
 	const beritaTerbaru = db
 		.prepare(
-			`SELECT * FROM posts WHERE status = 'terbit'
-			 ORDER BY COALESCE(published_at, created_at) DESC LIMIT 4`
+			`SELECT ${KOLOM_POSTS} FROM posts p WHERE p.status = 'terbit'
+			 ORDER BY COALESCE(p.published_at, p.created_at) DESC LIMIT 4`
 		)
 		.all() as Post[];
 

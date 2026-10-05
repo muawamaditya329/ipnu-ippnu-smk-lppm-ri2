@@ -58,8 +58,11 @@ export const actions: Actions = {
 			{ id: number; cover: string | null } | undefined;
 		if (!post) return fail(404, { galat: 'Berita tidak ditemukan atau sudah terhapus.' });
 
-		hapusUnggahan(post.cover);
+		// Baris DB dihapus DULU baru file cover: bila DELETE gagal (mis. bentrok
+		// foreign key), cover masih dirujuk baris yang hidup; sebaliknya file yang
+		// gagal terhapus hanya menyisakan orphan tanpa pemilik (tidak berbahaya).
 		db.prepare('DELETE FROM posts WHERE id = ?').run(id);
+		hapusUnggahan(post.cover);
 		return { sukses: true };
 	}
 };

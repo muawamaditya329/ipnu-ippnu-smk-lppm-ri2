@@ -1,5 +1,6 @@
 import { error } from '@sveltejs/kit';
 import { db, type Post } from '#lib/server/db.ts';
+import { KOLOM_POSTS } from '#lib/server/berita.ts';
 import type { PageServerLoad } from './$types';
 
 export const load: PageServerLoad = async ({ params }) => {
@@ -14,7 +15,7 @@ export const load: PageServerLoad = async ({ params }) => {
 
 	const post = db
 		.prepare(
-			`SELECT p.*, u.nama AS penulis_nama FROM posts p
+			`SELECT ${KOLOM_POSTS}, u.nama AS penulis_nama FROM posts p
 			 LEFT JOIN users u ON u.id = p.penulis_id
 			 WHERE p.slug = ? AND p.status = 'terbit'`
 		)
@@ -23,7 +24,7 @@ export const load: PageServerLoad = async ({ params }) => {
 	// Terkait: utamakan kategori & cakupan yang sama, lalu yang terbaru.
 	const terkait = db
 		.prepare(
-			`SELECT p.*, u.nama AS penulis_nama FROM posts p
+			`SELECT ${KOLOM_POSTS}, u.nama AS penulis_nama FROM posts p
 			 LEFT JOIN users u ON u.id = p.penulis_id
 			 WHERE p.status = 'terbit' AND p.id != ?
 			 ORDER BY (p.kategori = ?) DESC, (p.cakupan = ? OR p.cakupan = 'umum') DESC,

@@ -1,4 +1,5 @@
 import { db, type Post } from '#lib/server/db.ts';
+import { KOLOM_POSTS } from '#lib/server/berita.ts';
 import { escapeLike, keNomorHalaman } from '#lib/utils.ts';
 import type { PageServerLoad } from './$types';
 
@@ -30,7 +31,7 @@ export const load: PageServerLoad = async ({ url }) => {
 
 	const posts = db
 		.prepare(
-			`SELECT p.*, u.nama AS penulis_nama FROM posts p
+			`SELECT ${KOLOM_POSTS}, u.nama AS penulis_nama FROM posts p
 			 LEFT JOIN users u ON u.id = p.penulis_id
 			 ${where} ORDER BY COALESCE(p.published_at, p.created_at) DESC
 			 LIMIT ? OFFSET ?`

@@ -1,5 +1,6 @@
 import { redirect } from '@sveltejs/kit';
 import { db, type EventItem, type Post } from '#lib/server/db.ts';
+import { KOLOM_POSTS } from '#lib/server/berita.ts';
 import { hariIni } from '#lib/utils.ts';
 import type { PageServerLoad } from './$types';
 
@@ -54,7 +55,7 @@ export const load: PageServerLoad = async ({ locals }) => {
 	// Kabar terbaru: berita terbit dengan cakupan yang sama, 5 terakhir.
 	const berita = db
 		.prepare(
-			`SELECT p.*, u.nama AS penulis_nama FROM posts p
+			`SELECT ${KOLOM_POSTS}, u.nama AS penulis_nama FROM posts p
 			 LEFT JOIN users u ON u.id = p.penulis_id
 			 WHERE p.status = 'terbit' AND p.cakupan IN ('umum', ?)
 			 ORDER BY COALESCE(p.published_at, p.created_at) DESC
