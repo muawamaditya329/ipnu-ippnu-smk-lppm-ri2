@@ -48,7 +48,12 @@ export function loginAnggota(
 	// Satu NIS bisa saja tercatat lebih dari sekali (pendaftar lama yang mendaftar
 	// ulang); ambil baris yang paling layak masuk — statusnya aktif/alumni — atau
 	// baris terbaru bila tidak ada, agar pesannya tetap masuk akal.
-	const baris = db.prepare('SELECT * FROM members WHERE nis = ? ORDER BY id').all(nis) as Member[];
+	const baris = db
+		.prepare(
+			`SELECT id, nama, jenis_kelamin, status, no_reg, nis, password_hash
+			 FROM members WHERE nis = ? ORDER BY id`
+		)
+		.all(nis) as (AnggotaSesi & { password_hash: string | null })[];
 	const member =
 		baris.find((m) => STATUS_BOLEH_MASUK.includes(m.status)) ?? baris[baris.length - 1];
 

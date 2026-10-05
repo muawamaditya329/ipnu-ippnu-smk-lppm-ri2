@@ -144,7 +144,10 @@ export function login(
 	url: URL | null = null
 ): { ok: true; user: User } | { ok: false; pesan: string } {
 	const row = db
-		.prepare('SELECT * FROM users WHERE username = ? COLLATE NOCASE')
+		.prepare(
+			`SELECT id, nama, username, role, password_hash, aktif
+			 FROM users WHERE username = ? COLLATE NOCASE`
+		)
 		.get(username.trim()) as (User & { password_hash: string; aktif: number }) | undefined;
 
 	if (!row) {
